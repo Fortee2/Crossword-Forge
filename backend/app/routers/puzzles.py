@@ -1,0 +1,144 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List, Optional, Any
+from pydantic import BaseModel
+from datetime import datetime
+
+from ..database import get_db
+from ..models import Puzzle
+from ..services.grid_validator import validate_grid
+
+
+router = APIRouter(prefix="/puzzles", tags=["puzzles"])
+
+
+class GridCell(BaseModel):
+    isBlack: bool = False
+    letter: str = ""
+
+
+class WordPlacement(BaseModel):
+    word: str
+    clue_id: Optional[int] = None
+    row: int
+    col: int
+    direction: str
+
+
+class PuzzleCreate(BaseModel):
+    title: str = "Untitled Puzzle"
+    grid_data: List[List[dict]]
+    word_placements: Optional[List[WordPlacement]] = None
+    difficulty: Optional[int] = None
+    status: str = "draft"
+    theme: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class PuzzleUpdate(BaseModel):
+    title: Optional[str] = None
+    grid_data: Optional[List[List[dict]]] = None
+    word_placements: Optional[List[WordPlacement]] = None
+    difficulty: Optional[int] = None
+    status: Optional[str] = None
+    theme: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class PuzzleResponse(BaseModel):
+    id: int
+    title: str
+    grid_data: List[List[dict]]
+    word_placements: Optional[List[dict]] = None
+    difficulty: Optional[int] = None
+    status: str
+    theme: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ValidationRequest(BaseModel):
+    grid_data: List[List[dict]]
+    symmetry_enabled: bool = True
+
+
+class ValidationResponse(BaseModel):
+    valid: bool
+    warnings: List[dict]
+
+
+@router.post("", response_model=PuzzleResponse)
+def create_puzzle(puzzle: PuzzleCreate, db: Session = Depends(get_db)):
+    db_puzzle = Puzzle(
+        title=puzzle.title,
+        grid_data=puzzle.grid_data,
+        word_placements=[wp.model_dump() for wp in puzzle.word_placements] if puzzle.word_placements else None,
+        difficulty=puzzle.difficulty,
+        status=puzzle.status,
+        theme=puzzle.theme,
+        notes=puzzle.notes
+    )
+    db.add(db_puzzle)
+    db.commit()
+    db.refresh(db_puzzle)
+    return db_puzzle
+
+
+@router.get("", response_model=List[PuzzleResponse])
+def list_puzzles(
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Puzzle)
+    if status:
+        query = query.filter(Puzzle.status == status)
+    return query.order_by(Puzzle.updated_at.desc()).offset(skip).limit(limit).all()
+
+
+@router.get("/{puzzle_id}", response_model=PuzzleResponse)
+def get_puzzle(puzzle_id: int, db: Session = Depends(get_db)):
+    puzzle = db.query(Puzzle).filter(Puzzle.id == puzzle_id).first()
+    if not puzzle:
+        raise HTTPException(status_code=404, detail="Puzzle not found")
+    return puzzle
+
+
+@router.put("/{puzzle_id}", response_model=PuzzleResponse)
+def update_puzzle(puzzle_id: int, puzzle_update: PuzzleUpdate, db: Session = Depends(get_db)):
+    puzzle = db.query(Puzzle).filter(Puzzle.id == puzzle_id).first()
+    if not puzzle:
+        raise HTTPException(status_code=404, detail="Puzzle not found")
+
+    update_data = puzzle_update.model_dump(exclude_unset=True)
+    if "word_placements" in update_data and update_data["word_placements"]:
+        update_data["word_placements"] = [wp.model_dump() if hasattr(wp, 'model_dump') else wp for wp in update_data["word_placements"]]
+
+    for key, value in update_data.items():
+        setattr(puzzle, key, value)
+
+    db.commit()
+    db.refresh(puzzle)
+    return puzzle
+
+
+@router.delete("/{puzzle_id}")
+def delete_puzzle(puzzle_id: int, db: Session = Depends(get_db)):
+    puzzle = db.query(Puzzle).filter(Puzzle.id == puzzle_id).first()
+    if not puzzle:
+        raise HTTPException(status_code=404, detail="Puzzle not found")
+
+    db.delete(puzzle)
+    db.commit()
+    return {"message": "Puzzle deleted successfully"}
+
+
+@router.post("/validate", response_model=ValidationResponse)
+def validate_puzzle_grid(request: ValidationRequest):
+    result = validate_grid(request.grid_data, request.symmetry_enabled)
+    return result
