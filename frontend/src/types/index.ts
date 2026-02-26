@@ -50,3 +50,41 @@ export interface NumberedCell {
   col: number;
   number: number;
 }
+
+// Clue Database types
+export interface ClueInfo {
+  id: number;
+  clue_text: string;
+  difficulty: number;
+  tags?: string;
+  created_at?: string;
+}
+
+export interface Answer {
+  id: number;
+  word: string;
+  length: number;
+  created_at: string;
+  clues: ClueInfo[];
+}
+
+export interface AnswerListItem {
+  id: number;
+  word: string;
+  length: number;
+  created_at: string;
+  clue_count: number;
+}
+
+export interface WordSuggestion {
+  id: number;
+  word: string;
+  length: number;
+  clues: ClueInfo[];
+}
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}

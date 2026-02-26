@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { GridCell, WordEntry, NumberedCell, ValidationResult, WordPlacement } from '../../types';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { GridCell, WordEntry, NumberedCell, ValidationResult, WordPlacement, ClueInfo } from '../../types';
 import { validateGrid } from '../../api/puzzles';
 import CluePanel, { getClueKey } from './CluePanel';
+import { WordSuggestions } from './WordSuggestions';
 import './GridEditor.css';
 
 const GRID_SIZE = 15;
@@ -378,6 +379,70 @@ export default function GridEditor({
     setSelectedCell(null);
   };
 
+  // Find the current word based on selected cell and direction
+  const currentWord = useMemo((): WordEntry | null => {
+    if (!selectedCell) return null;
+
+    const { row, col } = selectedCell;
+    if (grid[row][col].isBlack) return null;
+
+    const wordList = direction === 'across' ? words.across : words.down;
+
+    // Find the word that contains this cell
+    for (const word of wordList) {
+      if (direction === 'across') {
+        if (word.row === row && col >= word.col && col < word.col + word.word.length) {
+          return word;
+        }
+      } else {
+        if (word.col === col && row >= word.row && row < word.row + word.word.length) {
+          return word;
+        }
+      }
+    }
+
+    return null;
+  }, [selectedCell, direction, words, grid]);
+
+  // Fill in a suggested word
+  const handleFillSuggestedWord = useCallback(
+    (word: string) => {
+      if (!currentWord) return;
+
+      const newGrid = grid.map((r) => r.map((c) => ({ ...c })));
+
+      if (currentWord.direction === 'across') {
+        for (let i = 0; i < word.length; i++) {
+          const col = currentWord.col + i;
+          if (col < GRID_SIZE) {
+            newGrid[currentWord.row][col].letter = word[i];
+          }
+        }
+      } else {
+        for (let i = 0; i < word.length; i++) {
+          const row = currentWord.row + i;
+          if (row < GRID_SIZE) {
+            newGrid[row][currentWord.col].letter = word[i];
+          }
+        }
+      }
+
+      updateGrid(newGrid);
+    },
+    [currentWord, grid, updateGrid]
+  );
+
+  // Handle selecting a clue from suggestions
+  const handleSelectSuggestedClue = useCallback(
+    (clue: ClueInfo) => {
+      if (!currentWord) return;
+
+      const key = getClueKey(currentWord);
+      handleClueChange(key, clue.clue_text);
+    },
+    [currentWord, handleClueChange]
+  );
+
   return (
     <div className="grid-editor">
       <div className="toolbar">
@@ -502,6 +567,12 @@ export default function GridEditor({
             clues={clues}
             onClueChange={handleClueChange}
             onClose={handleCloseCluePanel}
+          />
+
+          <WordSuggestions
+            selectedWord={currentWord}
+            onSelectWord={handleFillSuggestedWord}
+            onSelectClue={handleSelectSuggestedClue}
           />
         </div>
       </div>

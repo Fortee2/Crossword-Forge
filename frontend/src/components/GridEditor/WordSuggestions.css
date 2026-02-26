@@ -1,0 +1,184 @@
+.word-suggestions {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--surface-color);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.word-suggestions h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.word-suggestions .no-selection,
+.word-suggestions .complete-word,
+.word-suggestions .no-matches,
+.word-suggestions .loading,
+.word-suggestions .error {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  padding: 0.5rem 0;
+}
+
+.word-suggestions .error {
+  color: var(--error-text);
+}
+
+.pattern-display {
+  padding: 0.5rem;
+  margin-bottom: 0.75rem;
+  background: var(--bg-color);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.pattern-display .pattern {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.1em;
+  margin-left: 0.25rem;
+}
+
+.pattern-display .word-info {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.suggestions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.suggestion-item {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.suggestion-header:hover {
+  background: var(--bg-color);
+}
+
+.suggestion-word {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+
+.suggestion-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clue-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.fill-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.fill-btn:hover {
+  background: var(--primary-hover);
+}
+
+.clues-dropdown {
+  padding: 0.5rem;
+  background: var(--bg-color);
+  border-top: 1px solid var(--border-color);
+}
+
+.clue-option {
+  padding: 0.5rem;
+  margin-bottom: 0.375rem;
+  background: var(--surface-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.clue-option:last-child {
+  margin-bottom: 0;
+}
+
+.clue-option:hover {
+  background: var(--cell-highlighted);
+}
+
+.clue-option .clue-text {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: 0.25rem;
+}
+
+.clue-option .clue-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.clue-option .clue-difficulty {
+  display: flex;
+  gap: 0.0625rem;
+}
+
+.clue-option .star {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.clue-option .star.filled {
+  color: #f59e0b;
+}
+
+.clue-option .clue-tags {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.clue-option .tag {
+  padding: 0.125rem 0.375rem;
+  font-size: 0.625rem;
+  background: var(--bg-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+}
+
+.suggestion-item.expanded .suggestion-header {
+  background: var(--bg-color);
+}

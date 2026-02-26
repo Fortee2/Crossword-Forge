@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
-from .routers import puzzles
+from .routers import puzzles, answers
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -23,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(puzzles.router)
+app.include_router(answers.router)
 
 
 @app.get("/")

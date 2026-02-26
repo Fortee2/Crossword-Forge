@@ -7,6 +7,7 @@ from datetime import datetime
 from ..database import get_db
 from ..models import Puzzle
 from ..services.grid_validator import validate_grid
+from ..services.word_suggester import get_word_suggestions, get_suggestions_for_slot
 
 
 router = APIRouter(prefix="/puzzles", tags=["puzzles"])
@@ -143,3 +144,47 @@ def delete_puzzle(puzzle_id: int, db: Session = Depends(get_db)):
 def validate_puzzle_grid(request: ValidationRequest):
     result = validate_grid(request.grid_data, request.symmetry_enabled)
     return result
+
+
+class SuggestionRequest(BaseModel):
+    pattern: Optional[str] = None
+    grid_data: Optional[List[List[dict]]] = None
+    row: Optional[int] = None
+    col: Optional[int] = None
+    direction: Optional[str] = None
+    limit: int = 20
+
+
+class ClueInfo(BaseModel):
+    id: int
+    clue_text: str
+    difficulty: int
+    tags: Optional[str] = None
+
+
+class SuggestionResponse(BaseModel):
+    id: int
+    word: str
+    length: int
+    clues: List[ClueInfo]
+
+
+@router.post("/suggestions", response_model=List[SuggestionResponse])
+def get_suggestions(request: SuggestionRequest, db: Session = Depends(get_db)):
+    """
+    Get word suggestions for filling in a puzzle slot.
+
+    Either provide:
+    - pattern: A pattern like "P_A_O" with underscores for unknowns
+    - OR grid_data + row + col + direction: Extract pattern from grid
+    """
+    if request.pattern:
+        suggestions = get_word_suggestions(db, request.pattern, request.limit)
+    elif request.grid_data and request.row is not None and request.col is not None and request.direction:
+        suggestions = get_suggestions_for_slot(
+            db, request.grid_data, request.row, request.col, request.direction, request.limit
+        )
+    else:
+        return []
+
+    return suggestions

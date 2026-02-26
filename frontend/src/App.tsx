@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GridEditor, createEmptyGrid } from './components/GridEditor';
+import { ClueDatabase } from './components/ClueDatabase';
 import { GridCell, Puzzle, WordPlacement } from './types';
 import { createPuzzle, getPuzzles, getPuzzle, updatePuzzle, deletePuzzle } from './api/puzzles';
 import './App.css';
 
+type View = 'editor' | 'database';
+
 function App() {
+  const [currentView, setCurrentView] = useState<View>('editor');
   const [grid, setGrid] = useState<GridCell[][]>(createEmptyGrid());
   const [wordPlacements, setWordPlacements] = useState<WordPlacement[]>([]);
   const [initialWordPlacements, setInitialWordPlacements] = useState<WordPlacement[] | undefined>(undefined);
@@ -115,28 +119,46 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>CrosswordForge</h1>
-        <div className="header-controls">
-          <input
-            type="text"
-            className="puzzle-title-input"
-            value={puzzleTitle}
-            onChange={(e) => setPuzzleTitle(e.target.value)}
-            placeholder="Puzzle title..."
-          />
-          <button onClick={handleNew} className="btn btn-secondary">
-            New
-          </button>
-          <button onClick={handleSave} className="btn btn-primary" disabled={isSaving}>
-            {isSaving ? 'Saving...' : currentPuzzleId ? 'Save' : 'Create'}
-          </button>
-          <button
-            onClick={() => setShowPuzzleList(!showPuzzleList)}
-            className="btn btn-secondary"
-          >
-            {showPuzzleList ? 'Hide List' : 'Load'}
-          </button>
+        <div className="header-left">
+          <h1>CrosswordForge</h1>
+          <nav className="main-nav">
+            <button
+              className={`nav-tab ${currentView === 'editor' ? 'active' : ''}`}
+              onClick={() => setCurrentView('editor')}
+            >
+              Grid Editor
+            </button>
+            <button
+              className={`nav-tab ${currentView === 'database' ? 'active' : ''}`}
+              onClick={() => setCurrentView('database')}
+            >
+              Clue Database
+            </button>
+          </nav>
         </div>
+        {currentView === 'editor' && (
+          <div className="header-controls">
+            <input
+              type="text"
+              className="puzzle-title-input"
+              value={puzzleTitle}
+              onChange={(e) => setPuzzleTitle(e.target.value)}
+              placeholder="Puzzle title..."
+            />
+            <button onClick={handleNew} className="btn btn-secondary">
+              New
+            </button>
+            <button onClick={handleSave} className="btn btn-primary" disabled={isSaving}>
+              {isSaving ? 'Saving...' : currentPuzzleId ? 'Save' : 'Create'}
+            </button>
+            <button
+              onClick={() => setShowPuzzleList(!showPuzzleList)}
+              className="btn btn-secondary"
+            >
+              {showPuzzleList ? 'Hide List' : 'Load'}
+            </button>
+          </div>
+        )}
       </header>
 
       {message && (
@@ -145,7 +167,7 @@ function App() {
         </div>
       )}
 
-      {showPuzzleList && (
+      {currentView === 'editor' && showPuzzleList && (
         <div className="puzzle-list-panel">
           <h3>Saved Puzzles</h3>
           {puzzles.length === 0 ? (
@@ -183,13 +205,17 @@ function App() {
       )}
 
       <main className="app-main">
-        <GridEditor
-          initialGrid={grid}
-          initialWordPlacements={initialWordPlacements}
-          onGridChange={handleGridChange}
-          onWordPlacementsChange={handleWordPlacementsChange}
-          key={currentPuzzleId}
-        />
+        {currentView === 'editor' ? (
+          <GridEditor
+            initialGrid={grid}
+            initialWordPlacements={initialWordPlacements}
+            onGridChange={handleGridChange}
+            onWordPlacementsChange={handleWordPlacementsChange}
+            key={currentPuzzleId}
+          />
+        ) : (
+          <ClueDatabase />
+        )}
       </main>
     </div>
   );
