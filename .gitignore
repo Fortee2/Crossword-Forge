@@ -1,20 +1,40 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
 *.py[codz]
 *$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Environments
+.env
+.venv
+env/
+venv/
 backend/venv/
+
+# Database
 data/crossword.db
-.DS_Store
+
+# Frontend
 node_modules/
 frontend/dist/
 *.tsbuildinfo
+
+# IDE / Editor
+.idea/
+.vscode/
+.DS_Store
+
+# Claude Code
 .claude/
-.env
-.venv
-venv/
-*.egg-info/
-dist/
-build/
-.mypy_cache/
+
+# Misc
+*.log
+*.pyc
 .ruff_cache/
-.pytest_cache/
+.mypy_cache/
