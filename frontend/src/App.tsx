@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GridEditor, createEmptyGrid } from './components/GridEditor';
-import { GridCell, Puzzle } from './types';
+import { GridCell, Puzzle, WordPlacement } from './types';
 import { createPuzzle, getPuzzles, getPuzzle, updatePuzzle, deletePuzzle } from './api/puzzles';
 import './App.css';
 
 function App() {
   const [grid, setGrid] = useState<GridCell[][]>(createEmptyGrid());
+  const [wordPlacements, setWordPlacements] = useState<WordPlacement[]>([]);
+  const [initialWordPlacements, setInitialWordPlacements] = useState<WordPlacement[] | undefined>(undefined);
   const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
   const [currentPuzzleId, setCurrentPuzzleId] = useState<number | null>(null);
   const [puzzleTitle, setPuzzleTitle] = useState('Untitled Puzzle');
@@ -39,12 +41,14 @@ function App() {
         await updatePuzzle(currentPuzzleId, {
           title: puzzleTitle,
           grid_data: grid,
+          word_placements: wordPlacements,
         });
         showMessage('success', 'Puzzle saved!');
       } else {
         const newPuzzle = await createPuzzle({
           title: puzzleTitle,
           grid_data: grid,
+          word_placements: wordPlacements,
         });
         setCurrentPuzzleId(newPuzzle.id);
         showMessage('success', 'Puzzle created!');
@@ -64,6 +68,7 @@ function App() {
       setGrid(puzzle.grid_data);
       setPuzzleTitle(puzzle.title);
       setCurrentPuzzleId(puzzle.id);
+      setInitialWordPlacements(puzzle.word_placements as WordPlacement[] | undefined);
       setShowPuzzleList(false);
       showMessage('success', 'Puzzle loaded!');
     } catch {
@@ -94,12 +99,18 @@ function App() {
     setGrid(createEmptyGrid());
     setPuzzleTitle('Untitled Puzzle');
     setCurrentPuzzleId(null);
+    setInitialWordPlacements(undefined);
+    setWordPlacements([]);
     setShowPuzzleList(false);
   };
 
   const handleGridChange = (newGrid: GridCell[][]) => {
     setGrid(newGrid);
   };
+
+  const handleWordPlacementsChange = useCallback((placements: WordPlacement[]) => {
+    setWordPlacements(placements);
+  }, []);
 
   return (
     <div className="app">
@@ -172,7 +183,13 @@ function App() {
       )}
 
       <main className="app-main">
-        <GridEditor initialGrid={grid} onGridChange={handleGridChange} key={currentPuzzleId} />
+        <GridEditor
+          initialGrid={grid}
+          initialWordPlacements={initialWordPlacements}
+          onGridChange={handleGridChange}
+          onWordPlacementsChange={handleWordPlacementsChange}
+          key={currentPuzzleId}
+        />
       </main>
     </div>
   );

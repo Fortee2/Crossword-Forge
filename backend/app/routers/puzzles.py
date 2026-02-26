@@ -19,10 +19,11 @@ class GridCell(BaseModel):
 
 class WordPlacement(BaseModel):
     word: str
-    clue_id: Optional[int] = None
+    clue: Optional[str] = None
     row: int
     col: int
     direction: str
+    number: int
 
 
 class PuzzleCreate(BaseModel):

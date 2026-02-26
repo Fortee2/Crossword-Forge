@@ -145,10 +145,16 @@
   margin-bottom: 0.25rem;
 }
 
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 400px;
+}
+
 .word-lists {
   display: flex;
-  gap: 2rem;
-  min-width: 400px;
+  gap: 1rem;
 }
 
 .word-list {
@@ -157,7 +163,7 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1rem;
-  max-height: 520px;
+  max-height: 280px;
   overflow-y: auto;
 }
 
@@ -175,12 +181,47 @@
   padding: 0;
 }
 
-.word-list li {
+.word-item {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0;
+  padding: 0.375rem 0.5rem;
   font-size: 0.875rem;
   font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  transition: background-color 0.15s ease;
+}
+
+.word-item:hover {
+  background: var(--bg-color);
+}
+
+.word-item.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+.word-item.active .word-number,
+.word-item.active .word-text {
+  color: white;
+}
+
+.word-item.active .clue-indicator {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.word-item.active .clue-indicator.filled {
+  color: white;
+}
+
+.word-item.no-clue {
+  opacity: 0.85;
+}
+
+.word-item.has-clue .word-text {
+  color: var(--text-primary);
 }
 
 .word-number {
@@ -191,6 +232,18 @@
 .word-text {
   color: var(--text-primary);
   letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.clue-indicator {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.clue-indicator.filled {
+  color: var(--success-text);
+  opacity: 1;
 }
 
 .instructions {
@@ -203,7 +256,11 @@
 }
 
 .instructions p {
-  margin: 0;
+  margin: 0 0 0.25rem 0;
+}
+
+.instructions p:last-child {
+  margin-bottom: 0;
 }
 
 .instructions strong {

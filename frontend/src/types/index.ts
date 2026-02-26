@@ -5,10 +5,11 @@ export interface GridCell {
 
 export interface WordPlacement {
   word: string;
-  clue_id?: number;
+  clue?: string;
   row: number;
   col: number;
   direction: 'across' | 'down';
+  number: number;
 }
 
 export interface Puzzle {

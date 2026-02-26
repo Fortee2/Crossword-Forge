@@ -1,10 +1,11 @@
-import { Puzzle, GridCell, ValidationResult } from '../types';
+import { Puzzle, GridCell, ValidationResult, WordPlacement } from '../types';
 
 const API_BASE = 'http://localhost:8000';
 
 export async function createPuzzle(data: {
   title: string;
   grid_data: GridCell[][];
+  word_placements?: WordPlacement[];
   status?: string;
   theme?: string;
   notes?: string;
@@ -35,6 +36,7 @@ export async function updatePuzzle(
   data: Partial<{
     title: string;
     grid_data: GridCell[][];
+    word_placements: WordPlacement[];
     status: string;
     theme: string;
     notes: string;

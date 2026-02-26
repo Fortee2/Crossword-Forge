@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { GridCell, WordEntry, NumberedCell, ValidationResult } from '../../types';
+import { GridCell, WordEntry, NumberedCell, ValidationResult, WordPlacement } from '../../types';
 import { validateGrid } from '../../api/puzzles';
+import CluePanel, { getClueKey } from './CluePanel';
 import './GridEditor.css';
 
 const GRID_SIZE = 15;
@@ -108,10 +109,17 @@ function extractWords(
 
 interface GridEditorProps {
   initialGrid?: GridCell[][];
+  initialWordPlacements?: WordPlacement[];
   onGridChange?: (grid: GridCell[][]) => void;
+  onWordPlacementsChange?: (placements: WordPlacement[]) => void;
 }
 
-export default function GridEditor({ initialGrid, onGridChange }: GridEditorProps) {
+export default function GridEditor({
+  initialGrid,
+  initialWordPlacements,
+  onGridChange,
+  onWordPlacementsChange,
+}: GridEditorProps) {
   const [grid, setGrid] = useState<GridCell[][]>(initialGrid || createEmptyGrid);
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [direction, setDirection] = useState<'across' | 'down'>('across');
@@ -121,6 +129,18 @@ export default function GridEditor({ initialGrid, onGridChange }: GridEditorProp
   const [words, setWords] = useState<{ across: WordEntry[]; down: WordEntry[] }>({
     across: [],
     down: [],
+  });
+  const [selectedWord, setSelectedWord] = useState<WordEntry | null>(null);
+  const [clues, setClues] = useState<Map<string, string>>(() => {
+    const map = new Map<string, string>();
+    if (initialWordPlacements) {
+      initialWordPlacements.forEach((wp) => {
+        if (wp.clue) {
+          map.set(`${wp.direction}-${wp.number}`, wp.clue);
+        }
+      });
+    }
+    return map;
   });
 
   const cellRefs = useRef<(HTMLDivElement | null)[][]>(
@@ -158,6 +178,46 @@ export default function GridEditor({ initialGrid, onGridChange }: GridEditorProp
 
     return () => clearTimeout(timer);
   }, [grid, symmetryEnabled]);
+
+  const handleWordClick = useCallback((word: WordEntry) => {
+    setSelectedWord(word);
+    setSelectedCell({ row: word.row, col: word.col });
+    setDirection(word.direction);
+    cellRefs.current[word.row][word.col]?.focus();
+  }, []);
+
+  const handleClueChange = useCallback(
+    (key: string, clue: string) => {
+      setClues((prev) => {
+        const newClues = new Map(prev);
+        if (clue) {
+          newClues.set(key, clue);
+        } else {
+          newClues.delete(key);
+        }
+        return newClues;
+      });
+    },
+    []
+  );
+
+  const handleCloseCluePanel = useCallback(() => {
+    setSelectedWord(null);
+  }, []);
+
+  // Generate word placements with clues whenever words or clues change
+  useEffect(() => {
+    const allWords = [...words.across, ...words.down];
+    const placements: WordPlacement[] = allWords.map((word) => ({
+      word: word.word,
+      clue: clues.get(getClueKey(word)) || undefined,
+      row: word.row,
+      col: word.col,
+      direction: word.direction,
+      number: word.number,
+    }));
+    onWordPlacementsChange?.(placements);
+  }, [words, clues, onWordPlacementsChange]);
 
   const toggleBlackSquare = useCallback(
     (row: number, col: number) => {
@@ -385,36 +445,74 @@ export default function GridEditor({ initialGrid, onGridChange }: GridEditorProp
           )}
         </div>
 
-        <div className="word-lists">
-          <div className="word-list">
-            <h3>Across</h3>
-            <ul>
-              {words.across.map((entry) => (
-                <li key={`across-${entry.number}`}>
-                  <span className="word-number">{entry.number}.</span>
-                  <span className="word-text">{entry.word}</span>
-                </li>
-              ))}
-            </ul>
+        <div className="sidebar">
+          <div className="word-lists">
+            <div className="word-list">
+              <h3>Across</h3>
+              <ul>
+                {words.across.map((entry) => {
+                  const hasClue = clues.has(getClueKey(entry));
+                  const isActive =
+                    selectedWord?.number === entry.number &&
+                    selectedWord?.direction === 'across';
+                  return (
+                    <li
+                      key={`across-${entry.number}`}
+                      className={`word-item ${hasClue ? 'has-clue' : 'no-clue'} ${isActive ? 'active' : ''}`}
+                      onClick={() => handleWordClick(entry)}
+                    >
+                      <span className="word-number">{entry.number}.</span>
+                      <span className="word-text">{entry.word}</span>
+                      <span className={`clue-indicator ${hasClue ? 'filled' : ''}`}>
+                        {hasClue ? '✓' : '○'}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <div className="word-list">
+              <h3>Down</h3>
+              <ul>
+                {words.down.map((entry) => {
+                  const hasClue = clues.has(getClueKey(entry));
+                  const isActive =
+                    selectedWord?.number === entry.number &&
+                    selectedWord?.direction === 'down';
+                  return (
+                    <li
+                      key={`down-${entry.number}`}
+                      className={`word-item ${hasClue ? 'has-clue' : 'no-clue'} ${isActive ? 'active' : ''}`}
+                      onClick={() => handleWordClick(entry)}
+                    >
+                      <span className="word-number">{entry.number}.</span>
+                      <span className="word-text">{entry.word}</span>
+                      <span className={`clue-indicator ${hasClue ? 'filled' : ''}`}>
+                        {hasClue ? '✓' : '○'}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
-          <div className="word-list">
-            <h3>Down</h3>
-            <ul>
-              {words.down.map((entry) => (
-                <li key={`down-${entry.number}`}>
-                  <span className="word-number">{entry.number}.</span>
-                  <span className="word-text">{entry.word}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+
+          <CluePanel
+            selectedWord={selectedWord}
+            clues={clues}
+            onClueChange={handleClueChange}
+            onClose={handleCloseCluePanel}
+          />
         </div>
       </div>
 
       <div className="instructions">
         <p>
-          <strong>Controls:</strong> Click cell to select | Right-click to toggle black square |
-          Type letters | Arrow keys to navigate | Tab/Space to switch direction
+          <strong>Grid:</strong> Click cell to select | Right-click to toggle black | Type letters |
+          Arrow keys to navigate | Tab/Space to switch direction
+        </p>
+        <p>
+          <strong>Clues:</strong> Click a word in the list to add or edit its clue
         </p>
       </div>
     </div>
