@@ -71,7 +71,11 @@ export interface Answer {
 export interface AnswerListItem {
   id: number;
   word: string;
+  display?: string;
   length: number;
+  score?: number;
+  source?: string;
+  is_phrase?: boolean;
   created_at: string;
   clue_count: number;
 }
@@ -79,7 +83,11 @@ export interface AnswerListItem {
 export interface WordSuggestion {
   id: number;
   word: string;
+  display?: string;
   length: number;
+  score?: number;
+  source?: string;
+  is_phrase?: boolean;
   clues: ClueInfo[];
 }
 
@@ -87,4 +95,18 @@ export interface ImportResult {
   imported: number;
   skipped: number;
   errors: string[];
+}
+
+export interface AnswerStats {
+  total_answers: number;
+  total_clues: number;
+  avg_score: number;
+  by_source: Record<string, number>;
+  by_length: Record<number, number>;
+  phrase_count: number;
+}
+
+export interface SeedImportResult {
+  status: string;
+  message: string;
 }

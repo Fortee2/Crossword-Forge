@@ -3,20 +3,23 @@ Word Suggestion Service
 
 Provides pattern-based word suggestions from the clue database.
 Used by the grid editor to suggest words as letters are filled in.
+Results are sorted by score (highest first).
 """
 
 import re
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from ..models import Answer, Clue
 
 
 def get_word_suggestions(
     db: Session,
     pattern: str,
-    limit: int = 20
+    limit: int = 20,
+    source_filter: str | None = None
 ) -> list[dict]:
     """
-    Get word suggestions matching a pattern.
+    Get word suggestions matching a pattern, sorted by score.
 
     Args:
         db: Database session
@@ -24,7 +27,7 @@ def get_word_suggestions(
         limit: Maximum number of suggestions to return
 
     Returns:
-        List of answer dictionaries with their clues
+        List of answer dictionaries with their clues, sorted by score descending
     """
     pattern_upper = pattern.upper().strip()
     length = len(pattern_upper)
@@ -32,8 +35,11 @@ def get_word_suggestions(
     if length == 0:
         return []
 
-    # Query answers of matching length
+    # Query answers of matching length, ordered by score descending
     query = db.query(Answer).filter(Answer.length == length)
+    if source_filter:
+        query = query.filter(Answer.source.contains(source_filter))
+    query = query.order_by(desc(Answer.score))
     candidates = query.all()
 
     # Build regex for pattern matching
@@ -47,14 +53,18 @@ def get_word_suggestions(
     regex_pattern = "^" + "".join(regex_chars) + "$"
     regex = re.compile(regex_pattern)
 
-    # Filter candidates
+    # Filter candidates (already sorted by score from query)
     matching = []
     for answer in candidates:
         if regex.match(answer.word):
             matching.append({
                 "id": answer.id,
                 "word": answer.word,
+                "display": answer.display or answer.word,
                 "length": answer.length,
+                "score": answer.score or 100,
+                "source": answer.source or 'user',
+                "is_phrase": answer.is_phrase or False,
                 "clues": [
                     {
                         "id": c.id,

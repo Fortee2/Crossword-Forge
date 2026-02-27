@@ -1,4 +1,4 @@
-import { Answer, AnswerListItem, ClueInfo, WordSuggestion, ImportResult, GridCell } from '../types';
+import { Answer, AnswerListItem, ClueInfo, WordSuggestion, ImportResult, GridCell, AnswerStats, SeedImportResult } from '../types';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -25,7 +25,11 @@ export async function getAnswers(params?: {
   q?: string;
   min_length?: number;
   max_length?: number;
+  min_score?: number;
+  max_score?: number;
+  source?: string;
   tag?: string;
+  sort_by?: 'word' | 'score' | 'length';
 }): Promise<AnswerListItem[]> {
   const searchParams = new URLSearchParams();
   if (params?.skip) searchParams.set('skip', params.skip.toString());
@@ -33,7 +37,11 @@ export async function getAnswers(params?: {
   if (params?.q) searchParams.set('q', params.q);
   if (params?.min_length) searchParams.set('min_length', params.min_length.toString());
   if (params?.max_length) searchParams.set('max_length', params.max_length.toString());
+  if (params?.min_score !== undefined) searchParams.set('min_score', params.min_score.toString());
+  if (params?.max_score !== undefined) searchParams.set('max_score', params.max_score.toString());
+  if (params?.source) searchParams.set('source', params.source);
   if (params?.tag) searchParams.set('tag', params.tag);
+  if (params?.sort_by) searchParams.set('sort_by', params.sort_by);
 
   const url = `${API_BASE}/answers${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
   const response = await fetch(url);
@@ -139,7 +147,7 @@ export async function importAnswers(file: File): Promise<ImportResult> {
   return response.json();
 }
 
-// Word suggestions for grid editor
+// Word suggestions for grid editor (uses POST to puzzles/suggestions)
 export async function getWordSuggestions(params: {
   pattern?: string;
   grid_data?: GridCell[][];
@@ -154,5 +162,37 @@ export async function getWordSuggestions(params: {
     body: JSON.stringify(params),
   });
   if (!response.ok) throw new Error('Failed to get suggestions');
+  return response.json();
+}
+
+// New Phase 2 endpoints
+
+// Pattern-based word suggestions with scoring (uses GET to answers/suggest)
+export async function suggestWords(params: {
+  pattern: string;
+  limit?: number;
+}): Promise<WordSuggestion[]> {
+  const searchParams = new URLSearchParams();
+  searchParams.set('pattern', params.pattern);
+  if (params.limit) searchParams.set('limit', params.limit.toString());
+
+  const response = await fetch(`${API_BASE}/answers/suggest?${searchParams.toString()}`);
+  if (!response.ok) throw new Error('Failed to get word suggestions');
+  return response.json();
+}
+
+// Import seed word lists (Jones, Broda, CNEX)
+export async function importSeedLists(): Promise<SeedImportResult> {
+  const response = await fetch(`${API_BASE}/answers/import-seed`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to start seed import');
+  return response.json();
+}
+
+// Get database statistics
+export async function getAnswerStats(): Promise<AnswerStats> {
+  const response = await fetch(`${API_BASE}/answers/stats`);
+  if (!response.ok) throw new Error('Failed to get answer stats');
   return response.json();
 }

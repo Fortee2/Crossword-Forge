@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WordSuggestion, WordEntry, ClueInfo } from '../../types';
-import { getWordSuggestions } from '../../api/answers';
+import { suggestWords } from '../../api/answers';
 import './WordSuggestions.css';
 
 interface WordSuggestionsProps {
@@ -28,11 +28,18 @@ export function WordSuggestions({ selectedWord, onSelectWord, onSelectClue }: Wo
       return;
     }
 
+    // Require minimum pattern length
+    if (selectedWord.word.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const results = await getWordSuggestions({
+      // Use the new score-sorted suggestion endpoint
+      const results = await suggestWords({
         pattern: selectedWord.word,
         limit: 20,
       });
@@ -130,7 +137,15 @@ export function WordSuggestions({ selectedWord, onSelectWord, onSelectClue }: Wo
                 className="suggestion-header"
                 onClick={() => handleWordClick(suggestion)}
               >
-                <span className="suggestion-word">{suggestion.word}</span>
+                <div className="suggestion-word-info">
+                  <span className="suggestion-word">{suggestion.display || suggestion.word}</span>
+                  <span className="suggestion-score" title={`Score: ${suggestion.score || 100}`}>
+                    {suggestion.score || 100}
+                  </span>
+                  {suggestion.source && suggestion.source !== 'user' && (
+                    <span className="suggestion-source">{suggestion.source}</span>
+                  )}
+                </div>
                 <div className="suggestion-actions">
                   {suggestion.clues.length > 0 && (
                     <span className="clue-count">

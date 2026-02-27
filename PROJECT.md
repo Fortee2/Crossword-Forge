@@ -104,6 +104,47 @@ Your personal dictionary of answers and clues. Grows over time.
 
 **Done when:** You can build a grid with word suggestions pulling from your database, and write/store clues as you go.
 
+#### Word List Seed Sources
+
+The database starts empty but can be seeded from these free, community-maintained lists:
+
+| Source | Entries | Format | Score Range | License | Notes |
+|--------|---------|--------|-------------|---------|-------|
+| **[STWL](https://www.spreadthewordlist.com/)** | 310K | scored | 0–50 | Free | Community-curated, data-driven. Top pick. |
+| **[Jones](https://github.com/christophsjones/crossword-wordlist)** | 176K | `word;score` | 1–50 | Free | Composite of NYT/WSJ/WaPo/Broda/Norvig + hand-picked. Mixed case, preserves phrases. |
+| **[Broda](https://github.com/gregpoulos/crossword-owl)** | 493K | `word,score` CSV | 38–80 | Free (OWL project) | Classic constructor list. Largest, but most entries undifferentiated at 50. |
+| **[CNEX](https://github.com/Crossword-Nexus/collaborative-word-list)** | 568K | `WORD;score` | 5–90 | MIT | Biggest, widest score range. All caps, no spaces in multi-word entries. |
+| **[Ginsberg Clues](https://tiwwdty.com/clue/)** | Millions | App + DB | N/A | Free | Clue-answer pairs from published puzzles. For clue inspiration, not word fill. |
+
+**Paid option:** [XWordInfo](https://www.xwordinfo.com/WordList) (~$30/yr) — scored by actual NYT frequency. Best quality signal available.
+
+#### Import Design
+
+Extended `answers` table to support seeded data alongside user entries:
+
+```
+answers
+  id          INTEGER PRIMARY KEY
+  word        TEXT UNIQUE         -- uppercase, no spaces, e.g. "PIANO" (for matching)
+  display     TEXT                -- natural case, e.g. "Piano" (for UI)
+  length      INTEGER             -- pre-computed for fast pattern matching
+  score       INTEGER             -- normalized 0–100
+  source      TEXT                -- "jones", "broda", "cnex", "stwl", "user"
+  is_phrase   BOOLEAN             -- multi-word entry
+  created_at  TIMESTAMP
+```
+
+**Score normalization** (all mapped to 0–100 scale):
+- Jones 1–50 → ×2 → 2–100
+- Broda 38–80 → linear map → ~45–100
+- CNEX 5–90 → linear map → ~5–100
+- STWL 0–50 → ×2 → 0–100
+- User entries → default 100 (always surface first)
+
+**Merge rules:** If same word appears in multiple lists, keep highest normalized score and note all sources. User entries always win.
+
+**CNEX caveat:** Multi-word entries are space-stripped (`BONNIEANDCLYDE`). The import script should attempt to reconstruct display names from Jones/Broda where available, or flag for manual review.
+
 ---
 
 ### Phase 3 — Puzzle Management

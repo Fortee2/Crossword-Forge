@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -8,8 +8,12 @@ class Answer(Base):
     __tablename__ = "answers"
 
     id = Column(Integer, primary_key=True, index=True)
-    word = Column(String(50), unique=True, nullable=False, index=True)
+    word = Column(String(50), unique=True, nullable=False, index=True)  # uppercase, no spaces
+    display = Column(Text, nullable=True)  # natural case for UI display
     length = Column(Integer, nullable=False)
+    score = Column(Integer, default=100)  # normalized 0-100, user entries default to 100
+    source = Column(Text, default='user')  # 'jones', 'broda', 'cnex', or comma-joined
+    is_phrase = Column(Boolean, default=False)  # multi-word entry
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     clues = relationship("Clue", back_populates="answer", cascade="all, delete-orphan")

@@ -20,9 +20,72 @@
   color: var(--text-primary);
 }
 
+.header-stats {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.stat-item {
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-color);
+  border-radius: 4px;
+}
+
 .header-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Stats Panel */
+.stats-panel {
+  padding: 1rem;
+  background: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stats-panel h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.stat-section {
+  background: var(--bg-color);
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
+.stat-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .clue-database-content {
@@ -102,6 +165,50 @@
   border-color: var(--primary-color);
 }
 
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filter-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  min-width: 45px;
+}
+
+.score-input {
+  width: 50px;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-color);
+  color: var(--text-primary);
+}
+
+.score-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.source-select,
+.sort-select {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.source-select:focus,
+.sort-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
 .answers-list {
   flex: 1;
   overflow-y: auto;
@@ -132,11 +239,26 @@
 }
 
 .answer-word {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
   font-family: monospace;
   font-size: 1rem;
   color: var(--text-primary);
   letter-spacing: 0.05em;
+}
+
+.phrase-badge {
+  font-size: 0.625rem;
+  font-family: system-ui, sans-serif;
+  padding: 0.125rem 0.375rem;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  font-weight: 500;
 }
 
 .answer-meta {
@@ -145,6 +267,15 @@
   margin-top: 0.25rem;
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.answer-score {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.answer-source {
+  font-style: italic;
 }
 
 .detail-panel {
@@ -435,6 +566,20 @@
 
 .file-input {
   display: none;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  color: var(--primary-hover);
 }
 
 /* Responsive */

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Answer, AnswerListItem, ClueInfo } from '../../types';
+import { Answer, AnswerListItem, ClueInfo, AnswerStats } from '../../types';
 import {
   getAnswers,
   getAnswer,
@@ -9,6 +9,8 @@ import {
   updateClue,
   deleteClue,
   importAnswers,
+  importSeedLists,
+  getAnswerStats,
 } from '../../api/answers';
 import './ClueDatabase.css';
 
@@ -21,12 +23,18 @@ export function ClueDatabase({ onSelectAnswer }: ClueDatabaseProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<Answer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [stats, setStats] = useState<AnswerStats | null>(null);
+  const [showStats, setShowStats] = useState(false);
 
   // Search/filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [minLength, setMinLength] = useState<number | ''>('');
   const [maxLength, setMaxLength] = useState<number | ''>('');
+  const [minScore, setMinScore] = useState<number | ''>('');
+  const [maxScore, setMaxScore] = useState<number | ''>('');
+  const [sourceFilter, setSourceFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'word' | 'score' | 'length'>('word');
 
   // New answer form state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -62,7 +70,11 @@ export function ClueDatabase({ onSelectAnswer }: ClueDatabaseProps) {
         q: searchQuery || undefined,
         min_length: minLength || undefined,
         max_length: maxLength || undefined,
+        min_score: minScore || undefined,
+        max_score: maxScore || undefined,
+        source: sourceFilter || undefined,
         tag: tagFilter || undefined,
+        sort_by: sortBy,
         limit: 100,
       });
       setAnswers(data);
@@ -71,11 +83,38 @@ export function ClueDatabase({ onSelectAnswer }: ClueDatabaseProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, minLength, maxLength, tagFilter, showMessage]);
+  }, [searchQuery, minLength, maxLength, minScore, maxScore, sourceFilter, tagFilter, sortBy, showMessage]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const data = await getAnswerStats();
+      setStats(data);
+    } catch {
+      showMessage('error', 'Failed to load stats');
+    }
+  }, [showMessage]);
+
+  const handleImportSeed = async () => {
+    try {
+      const result = await importSeedLists();
+      showMessage('success', result.message);
+      // Reload after a delay to show initial imports
+      setTimeout(() => {
+        loadAnswers();
+        loadStats();
+      }, 2000);
+    } catch (err) {
+      showMessage('error', err instanceof Error ? err.message : 'Failed to start import');
+    }
+  };
 
   useEffect(() => {
     loadAnswers();
   }, [loadAnswers]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const handleSelectAnswer = async (id: number) => {
     try {
@@ -224,6 +263,16 @@ export function ClueDatabase({ onSelectAnswer }: ClueDatabaseProps) {
 
       <div className="clue-database-header">
         <h2>Clue Database</h2>
+        {stats && (
+          <div className="header-stats">
+            <span className="stat-item">{stats.total_answers.toLocaleString()} words</span>
+            <span className="stat-item">{stats.total_clues.toLocaleString()} clues</span>
+            <span className="stat-item">avg score: {stats.avg_score}</span>
+            <button className="btn btn-link" onClick={() => setShowStats(!showStats)}>
+              {showStats ? 'Hide' : 'More'} Stats
+            </button>
+          </div>
+        )}
         <div className="header-actions">
           <button className="btn btn-primary" onClick={() => setShowAddForm(true)}>
             Add Word
@@ -231,8 +280,47 @@ export function ClueDatabase({ onSelectAnswer }: ClueDatabaseProps) {
           <button className="btn btn-secondary" onClick={() => setShowImport(true)}>
             Import CSV
           </button>
+          <button className="btn btn-secondary" onClick={handleImportSeed}>
+            Import Word Lists
+          </button>
         </div>
       </div>
+
+      {showStats && stats && (
+        <div className="stats-panel">
+          <h3>Database Statistics</h3>
+          <div className="stats-grid">
+            <div className="stat-section">
+              <h4>By Source</h4>
+              {Object.entries(stats.by_source).sort((a, b) => b[1] - a[1]).map(([source, count]) => (
+                <div key={source} className="stat-row">
+                  <span className="stat-label">{source}</span>
+                  <span className="stat-value">{count.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+            <div className="stat-section">
+              <h4>By Length (Top 10)</h4>
+              {Object.entries(stats.by_length)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([length, count]) => (
+                  <div key={length} className="stat-row">
+                    <span className="stat-label">{length} letters</span>
+                    <span className="stat-value">{count.toLocaleString()}</span>
+                  </div>
+                ))}
+            </div>
+            <div className="stat-section">
+              <h4>Other</h4>
+              <div className="stat-row">
+                <span className="stat-label">Phrases</span>
+                <span className="stat-value">{stats.phrase_count.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="clue-database-content">
         <div className="answers-panel">
@@ -245,25 +333,65 @@ export function ClueDatabase({ onSelectAnswer }: ClueDatabaseProps) {
               className="search-input"
             />
             <div className="filter-row">
-              <input
-                type="number"
-                placeholder="Min"
-                value={minLength}
-                onChange={(e) => setMinLength(e.target.value ? parseInt(e.target.value) : '')}
-                className="length-input"
-                min={1}
-                max={21}
-              />
-              <span className="filter-separator">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                value={maxLength}
-                onChange={(e) => setMaxLength(e.target.value ? parseInt(e.target.value) : '')}
-                className="length-input"
-                min={1}
-                max={21}
-              />
+              <label className="filter-group">
+                <span className="filter-label">Length:</span>
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={minLength}
+                  onChange={(e) => setMinLength(e.target.value ? parseInt(e.target.value) : '')}
+                  className="length-input"
+                  min={1}
+                  max={21}
+                />
+                <span className="filter-separator">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={maxLength}
+                  onChange={(e) => setMaxLength(e.target.value ? parseInt(e.target.value) : '')}
+                  className="length-input"
+                  min={1}
+                  max={21}
+                />
+              </label>
+            </div>
+            <div className="filter-row">
+              <label className="filter-group">
+                <span className="filter-label">Score:</span>
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={minScore}
+                  onChange={(e) => setMinScore(e.target.value ? parseInt(e.target.value) : '')}
+                  className="score-input"
+                  min={0}
+                  max={100}
+                />
+                <span className="filter-separator">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={maxScore}
+                  onChange={(e) => setMaxScore(e.target.value ? parseInt(e.target.value) : '')}
+                  className="score-input"
+                  min={0}
+                  max={100}
+                />
+              </label>
+            </div>
+            <div className="filter-row">
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="source-select"
+              >
+                <option value="">All sources</option>
+                <option value="user">User</option>
+                <option value="jones">Jones</option>
+                <option value="broda">Broda</option>
+                <option value="cnex">CNEX</option>
+              </select>
               <input
                 type="text"
                 placeholder="Tag filter"
@@ -271,6 +399,15 @@ export function ClueDatabase({ onSelectAnswer }: ClueDatabaseProps) {
                 onChange={(e) => setTagFilter(e.target.value)}
                 className="tag-input"
               />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'word' | 'score' | 'length')}
+                className="sort-select"
+              >
+                <option value="word">Sort: A-Z</option>
+                <option value="score">Sort: Score</option>
+                <option value="length">Sort: Length</option>
+              </select>
             </div>
           </div>
 
@@ -288,9 +425,16 @@ export function ClueDatabase({ onSelectAnswer }: ClueDatabaseProps) {
                   className={`answer-item ${selectedAnswer?.id === answer.id ? 'selected' : ''}`}
                   onClick={() => handleSelectAnswer(answer.id)}
                 >
-                  <div className="answer-word">{answer.word}</div>
+                  <div className="answer-word">
+                    {answer.display || answer.word}
+                    {answer.is_phrase && <span className="phrase-badge">phrase</span>}
+                  </div>
                   <div className="answer-meta">
                     <span className="answer-length">{answer.length} letters</span>
+                    <span className="answer-score" title={`Score: ${answer.score || 100}`}>
+                      {answer.score || 100}
+                    </span>
+                    <span className="answer-source">{answer.source || 'user'}</span>
                     <span className="answer-clues">{answer.clue_count} clue{answer.clue_count !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
