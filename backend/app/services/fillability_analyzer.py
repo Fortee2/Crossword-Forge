@@ -21,8 +21,14 @@ SEVERITY_THRESHOLDS = {
 }
 
 
-def get_severity(fill_count: int) -> str:
-    """Determine severity level based on fill count."""
+def get_severity(fill_count: int, is_complete: bool = False) -> str:
+    """Determine severity level based on fill count.
+    
+    A complete word (no blanks) with at least 1 match is valid — mark as 'good'.
+    A complete word with 0 matches means it's not in the dictionary — mark as 'danger'.
+    """
+    if is_complete:
+        return 'good' if fill_count >= 1 else 'danger'
     if fill_count >= SEVERITY_THRESHOLDS['good']:
         return 'good'
     elif fill_count >= SEVERITY_THRESHOLDS['okay']:
@@ -224,7 +230,8 @@ def analyze_fillability(db: Session, grid_data: list[list[dict]]) -> dict:
 
     for slot in slots:
         fill_count = count_matching_words(db, slot['pattern'])
-        severity = get_severity(fill_count)
+        is_complete = '_' not in slot['pattern']
+        severity = get_severity(fill_count, is_complete=is_complete)
 
         result_slots.append({
             'number': slot['number'],
