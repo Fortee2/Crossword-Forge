@@ -1,4 +1,4 @@
-import { Puzzle, GridCell, ValidationResult, WordPlacement } from '../types';
+import { Puzzle, GridCell, ValidationResult, WordPlacement, FillabilityResult } from '../types';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -68,5 +68,15 @@ export async function validateGrid(
     body: JSON.stringify({ grid_data, symmetry_enabled }),
   });
   if (!response.ok) throw new Error('Failed to validate grid');
+  return response.json();
+}
+
+export async function analyzeFillability(grid_data: GridCell[][]): Promise<FillabilityResult> {
+  const response = await fetch(`${API_BASE}/puzzles/fillability`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grid_data }),
+  });
+  if (!response.ok) throw new Error('Failed to analyze fillability');
   return response.json();
 }

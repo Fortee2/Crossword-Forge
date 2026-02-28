@@ -110,3 +110,28 @@ export interface SeedImportResult {
   status: string;
   message: string;
 }
+
+// Fillability analysis types
+export type FillabilitySeverity = 'good' | 'okay' | 'tight' | 'danger';
+
+export interface SlotFillability {
+  number: number;
+  direction: 'across' | 'down';
+  row: number;
+  col: number;
+  length: number;
+  fill_count: number;
+  severity: FillabilitySeverity;
+}
+
+export interface FillabilitySummary {
+  good: number;
+  okay: number;
+  tight: number;
+  danger: number;
+}
+
+export interface FillabilityResult {
+  slots: SlotFillability[];
+  summary: FillabilitySummary;
+}

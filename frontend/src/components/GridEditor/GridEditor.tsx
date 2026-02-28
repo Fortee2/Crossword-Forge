@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { GridCell, WordEntry, NumberedCell, ValidationResult, WordPlacement, ClueInfo } from '../../types';
-import { validateGrid } from '../../api/puzzles';
+import { GridCell, WordEntry, NumberedCell, ValidationResult, WordPlacement, ClueInfo, FillabilityResult } from '../../types';
+import { validateGrid, analyzeFillability } from '../../api/puzzles';
 import CluePanel, { getClueKey } from './CluePanel';
 import { WordSuggestions } from './WordSuggestions';
+import { FillabilityOverlay, getCellSeverity, FillCountBadge } from './FillabilityOverlay';
 import './GridEditor.css';
+import './FillabilityOverlay.css';
 
 const GRID_SIZE = 15;
 
@@ -132,6 +134,8 @@ export default function GridEditor({
     down: [],
   });
   const [selectedWord, setSelectedWord] = useState<WordEntry | null>(null);
+  const [fillabilityEnabled, setFillabilityEnabled] = useState(false);
+  const [fillability, setFillability] = useState<FillabilityResult | null>(null);
   const [clues, setClues] = useState<Map<string, string>>(() => {
     const map = new Map<string, string>();
     if (initialWordPlacements) {
@@ -179,6 +183,25 @@ export default function GridEditor({
 
     return () => clearTimeout(timer);
   }, [grid, symmetryEnabled]);
+
+  // Fillability analysis (debounced)
+  useEffect(() => {
+    if (!fillabilityEnabled) {
+      setFillability(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await analyzeFillability(grid);
+        setFillability(result);
+      } catch {
+        // Analysis failed, likely server not running
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [grid, fillabilityEnabled]);
 
   const handleWordClick = useCallback((word: WordEntry) => {
     setSelectedWord(word);
@@ -454,6 +477,14 @@ export default function GridEditor({
           />
           Rotational Symmetry
         </label>
+        <label className="fillability-toggle">
+          <input
+            type="checkbox"
+            checked={fillabilityEnabled}
+            onChange={(e) => setFillabilityEnabled(e.target.checked)}
+          />
+          Fill Analysis
+        </label>
         <button onClick={clearGrid} className="clear-btn">
           Clear Grid
         </button>
@@ -464,6 +495,13 @@ export default function GridEditor({
 
       <div className="main-content">
         <div className="grid-container">
+          {fillabilityEnabled && fillability && (
+            <FillabilityOverlay
+              slots={fillability.slots}
+              summary={fillability.summary}
+              gridSize={GRID_SIZE}
+            />
+          )}
           <div className="grid">
             {grid.map((row, rowIndex) => (
               <div key={rowIndex} className="grid-row">
@@ -472,6 +510,10 @@ export default function GridEditor({
                   const isSelected =
                     selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
                   const highlighted = isHighlighted(rowIndex, colIndex);
+                  const severity =
+                    fillabilityEnabled && fillability && !cell.isBlack
+                      ? getCellSeverity(fillability.slots, rowIndex, colIndex)
+                      : null;
 
                   return (
                     <div
@@ -481,7 +523,9 @@ export default function GridEditor({
                       }}
                       className={`grid-cell ${cell.isBlack ? 'black' : ''} ${
                         isSelected ? 'selected' : ''
-                      } ${highlighted && !isSelected ? 'highlighted' : ''}`}
+                      } ${highlighted && !isSelected ? 'highlighted' : ''} ${
+                        severity ? `severity-${severity}` : ''
+                      }`}
                       onClick={(e) => handleCellClick(rowIndex, colIndex, e)}
                       onContextMenu={(e) => handleCellRightClick(rowIndex, colIndex, e)}
                       onKeyDown={(e) => handleKeyDown(rowIndex, colIndex, e)}
@@ -528,6 +572,13 @@ export default function GridEditor({
                     >
                       <span className="word-number">{entry.number}.</span>
                       <span className="word-text">{entry.word}</span>
+                      {fillabilityEnabled && fillability && (
+                        <FillCountBadge
+                          slots={fillability.slots}
+                          number={entry.number}
+                          direction="across"
+                        />
+                      )}
                       <span className={`clue-indicator ${hasClue ? 'filled' : ''}`}>
                         {hasClue ? '✓' : '○'}
                       </span>
@@ -552,6 +603,13 @@ export default function GridEditor({
                     >
                       <span className="word-number">{entry.number}.</span>
                       <span className="word-text">{entry.word}</span>
+                      {fillabilityEnabled && fillability && (
+                        <FillCountBadge
+                          slots={fillability.slots}
+                          number={entry.number}
+                          direction="down"
+                        />
+                      )}
                       <span className={`clue-indicator ${hasClue ? 'filled' : ''}`}>
                         {hasClue ? '✓' : '○'}
                       </span>

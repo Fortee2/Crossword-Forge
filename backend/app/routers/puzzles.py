@@ -8,6 +8,7 @@ from ..database import get_db
 from ..models import Puzzle
 from ..services.grid_validator import validate_grid
 from ..services.word_suggester import get_word_suggestions, get_suggestions_for_slot
+from ..services.fillability_analyzer import analyze_fillability
 
 
 router = APIRouter(prefix="/puzzles", tags=["puzzles"])
@@ -143,6 +144,50 @@ def delete_puzzle(puzzle_id: int, db: Session = Depends(get_db)):
 @router.post("/validate", response_model=ValidationResponse)
 def validate_puzzle_grid(request: ValidationRequest):
     result = validate_grid(request.grid_data, request.symmetry_enabled)
+    return result
+
+
+class FillabilityRequest(BaseModel):
+    grid_data: List[List[dict]]
+
+
+class SlotFillability(BaseModel):
+    number: int
+    direction: str
+    row: int
+    col: int
+    length: int
+    fill_count: int
+    severity: str
+
+
+class FillabilitySummary(BaseModel):
+    good: int
+    okay: int
+    tight: int
+    danger: int
+
+
+class FillabilityResponse(BaseModel):
+    slots: List[SlotFillability]
+    summary: FillabilitySummary
+
+
+@router.post("/fillability", response_model=FillabilityResponse)
+def analyze_grid_fillability(request: FillabilityRequest, db: Session = Depends(get_db)):
+    """
+    Analyze fillability of all word slots in a grid.
+
+    For each slot (across and down), counts how many words in the database
+    can fill that slot based on its length and any filled letters.
+
+    Severity levels:
+    - good: 100+ matching words
+    - okay: 20-99 matching words
+    - tight: 5-19 matching words
+    - danger: 0-4 matching words
+    """
+    result = analyze_fillability(db, request.grid_data)
     return result
 
 
