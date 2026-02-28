@@ -94,6 +94,11 @@
   background: rgba(239, 68, 68, 0.25);
 }
 
+/* Completed word cells — explicit white so they stand out from unfilled */
+.grid-cell.fill-complete {
+  background: #ffffff;
+}
+
 /* Ensure selected and highlighted cells still show properly */
 .grid-cell.selected.severity-good,
 .grid-cell.selected.severity-okay,

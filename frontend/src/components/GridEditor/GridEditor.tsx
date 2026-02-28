@@ -525,6 +525,8 @@ export default function GridEditor({
                         isSelected ? 'selected' : ''
                       } ${highlighted && !isSelected ? 'highlighted' : ''} ${
                         severity ? `severity-${severity}` : ''
+                      } ${
+                        fillabilityEnabled && fillability && !cell.isBlack && !severity && cell.letter ? 'fill-complete' : ''
                       }`}
                       onClick={(e) => handleCellClick(rowIndex, colIndex, e)}
                       onContextMenu={(e) => handleCellRightClick(rowIndex, colIndex, e)}
