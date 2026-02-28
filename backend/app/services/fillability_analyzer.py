@@ -229,9 +229,14 @@ def analyze_fillability(db: Session, grid_data: list[list[dict]]) -> dict:
     summary = {'good': 0, 'okay': 0, 'tight': 0, 'danger': 0}
 
     for slot in slots:
-        fill_count = count_matching_words(db, slot['pattern'])
         is_complete = '_' not in slot['pattern']
-        severity = get_severity(fill_count, is_complete=is_complete)
+
+        # Skip analysis for fully filled words — trust the constructor
+        if is_complete:
+            continue
+
+        fill_count = count_matching_words(db, slot['pattern'])
+        severity = get_severity(fill_count)
 
         result_slots.append({
             'number': slot['number'],
