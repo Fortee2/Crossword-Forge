@@ -80,6 +80,13 @@ export interface AnswerListItem {
   clue_count: number;
 }
 
+export interface CrossingDetail {
+  position: number;
+  direction: 'across' | 'down';
+  length: number;
+  fill_count: number;
+}
+
 export interface WordSuggestion {
   id: number;
   word: string;
@@ -89,6 +96,8 @@ export interface WordSuggestion {
   source?: string;
   is_phrase?: boolean;
   clues: ClueInfo[];
+  crossing_score?: number;
+  crossing_details?: CrossingDetail[];
 }
 
 export interface ImportResult {
@@ -134,4 +143,8 @@ export interface FillabilitySummary {
 export interface FillabilityResult {
   slots: SlotFillability[];
   summary: FillabilitySummary;
+}
+
+export interface CrossingSuggestionsResult {
+  suggestions: WordSuggestion[];
 }

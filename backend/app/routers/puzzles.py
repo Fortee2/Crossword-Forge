@@ -9,6 +9,7 @@ from ..models import Puzzle
 from ..services.grid_validator import validate_grid
 from ..services.word_suggester import get_word_suggestions, get_suggestions_for_slot
 from ..services.fillability_analyzer import analyze_fillability
+from ..services.crossing_analyzer import get_suggestions_with_crossings
 
 
 router = APIRouter(prefix="/puzzles", tags=["puzzles"])
@@ -233,3 +234,62 @@ def get_suggestions(request: SuggestionRequest, db: Session = Depends(get_db)):
         return []
 
     return suggestions
+
+
+class CrossingSuggestionRequest(BaseModel):
+    grid_data: List[List[dict]]
+    row: int
+    col: int
+    direction: str
+    limit: int = 30
+
+
+class CrossingDetail(BaseModel):
+    position: int
+    direction: str
+    length: int
+    fill_count: int
+
+
+class CrossingSuggestion(BaseModel):
+    id: int
+    word: str
+    display: Optional[str] = None
+    length: int
+    score: Optional[int] = None
+    source: Optional[str] = None
+    is_phrase: Optional[bool] = None
+    clues: List[ClueInfo]
+    crossing_score: int
+    crossing_details: List[CrossingDetail]
+
+
+class CrossingSuggestionResponse(BaseModel):
+    suggestions: List[CrossingSuggestion]
+
+
+@router.post("/suggestions-with-crossings", response_model=CrossingSuggestionResponse)
+def get_suggestions_with_crossing_analysis(
+    request: CrossingSuggestionRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Get word suggestions with crossing analysis.
+
+    For each suggestion, calculates how many valid crossing words can be formed
+    at each intersection. The crossing_score is the MINIMUM fill count across
+    all crossings (bottleneck metric - the weakest crossing determines viability).
+
+    Suggestions are sorted by crossing_score descending (most fillable first),
+    with word score as tiebreaker.
+    """
+    suggestions = get_suggestions_with_crossings(
+        db,
+        request.grid_data,
+        request.row,
+        request.col,
+        request.direction,
+        request.limit
+    )
+
+    return {"suggestions": suggestions}

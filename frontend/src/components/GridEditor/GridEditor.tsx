@@ -633,6 +633,7 @@ export default function GridEditor({
             selectedWord={currentWord}
             onSelectWord={handleFillSuggestedWord}
             onSelectClue={handleSelectSuggestedClue}
+            grid={grid}
           />
         </div>
       </div>

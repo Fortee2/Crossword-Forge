@@ -1,4 +1,4 @@
-import { Puzzle, GridCell, ValidationResult, WordPlacement, FillabilityResult } from '../types';
+import { Puzzle, GridCell, ValidationResult, WordPlacement, FillabilityResult, CrossingSuggestionsResult } from '../types';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -78,5 +78,27 @@ export async function analyzeFillability(grid_data: GridCell[][]): Promise<Filla
     body: JSON.stringify({ grid_data }),
   });
   if (!response.ok) throw new Error('Failed to analyze fillability');
+  return response.json();
+}
+
+export async function getSuggestionsWithCrossings(params: {
+  grid_data: GridCell[][];
+  row: number;
+  col: number;
+  direction: string;
+  limit?: number;
+}): Promise<CrossingSuggestionsResult> {
+  const response = await fetch(`${API_BASE}/puzzles/suggestions-with-crossings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grid_data: params.grid_data,
+      row: params.row,
+      col: params.col,
+      direction: params.direction,
+      limit: params.limit || 30,
+    }),
+  });
+  if (!response.ok) throw new Error('Failed to get suggestions with crossings');
   return response.json();
 }

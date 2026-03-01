@@ -205,3 +205,143 @@
 .suggestion-item.expanded .suggestion-header {
   background: var(--bg-color);
 }
+
+/* Crossing score styles */
+.crossing-score {
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  border-radius: 999px;
+  min-width: 24px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.crossing-score.crossing-good {
+  background: #10b981;
+  color: white;
+}
+
+.crossing-score.crossing-okay {
+  background: #3b82f6;
+  color: white;
+}
+
+.crossing-score.crossing-tight {
+  background: #f59e0b;
+  color: white;
+}
+
+.crossing-score.crossing-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.warning-icon {
+  font-weight: bold;
+  font-size: 0.75rem;
+}
+
+.suggestion-item.unfillable .suggestion-header {
+  opacity: 0.6;
+}
+
+.suggestion-word.grayed {
+  color: var(--text-secondary);
+}
+
+.fill-btn-warning {
+  background: #f97316;
+}
+
+.fill-btn-warning:hover {
+  background: #ea580c;
+}
+
+/* Crossing help tooltip */
+.crossing-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  background: var(--text-secondary);
+  color: var(--surface-color);
+  border-radius: 50%;
+  cursor: help;
+  position: relative;
+}
+
+.crossing-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 220px;
+  z-index: 100;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: normal;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.crossing-tooltip strong {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.crossing-tooltip p {
+  margin: 0 0 0.5rem 0;
+}
+
+.crossing-tooltip ul {
+  margin: 0;
+  padding-left: 1rem;
+  list-style: disc;
+}
+
+.crossing-tooltip li {
+  margin-bottom: 0.25rem;
+}
+
+.crossing-tooltip .color-good {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.crossing-tooltip .color-okay {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.crossing-tooltip .color-tight {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.crossing-tooltip .color-danger {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Crossing loading indicator */
+.crossing-loading {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-secondary);
+}
