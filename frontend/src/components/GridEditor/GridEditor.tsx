@@ -441,6 +441,21 @@ export default function GridEditor({
             newGrid[currentWord.row][col].letter = word[i];
           }
         }
+        // Place black square if shorter word is selected
+        if (word.length < currentWord.word.length) {
+          const col = currentWord.col + word.length;
+          if (col < GRID_SIZE) {
+            newGrid[currentWord.row][col].isBlack = true;
+            newGrid[currentWord.row][col].letter = '';
+            
+            if (symmetryEnabled) {
+              const mirrorRow = GRID_SIZE - 1 - currentWord.row;
+              const mirrorCol = GRID_SIZE - 1 - col;
+              newGrid[mirrorRow][mirrorCol].isBlack = true;
+              newGrid[mirrorRow][mirrorCol].letter = '';
+            }
+          }
+        }
       } else {
         for (let i = 0; i < word.length; i++) {
           const row = currentWord.row + i;
@@ -448,11 +463,26 @@ export default function GridEditor({
             newGrid[row][currentWord.col].letter = word[i];
           }
         }
+        // Place black square if shorter word is selected
+        if (word.length < currentWord.word.length) {
+          const row = currentWord.row + word.length;
+          if (row < GRID_SIZE) {
+            newGrid[row][currentWord.col].isBlack = true;
+            newGrid[row][currentWord.col].letter = '';
+            
+            if (symmetryEnabled) {
+              const mirrorRow = GRID_SIZE - 1 - row;
+              const mirrorCol = GRID_SIZE - 1 - currentWord.col;
+              newGrid[mirrorRow][mirrorCol].isBlack = true;
+              newGrid[mirrorRow][mirrorCol].letter = '';
+            }
+          }
+        }
       }
 
       updateGrid(newGrid);
     },
-    [currentWord, grid, updateGrid]
+    [currentWord, grid, updateGrid, symmetryEnabled]
   );
 
   // Handle selecting a clue from suggestions

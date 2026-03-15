@@ -16,7 +16,8 @@ def get_word_suggestions(
     db: Session,
     pattern: str,
     limit: int = 20,
-    source_filter: str | None = None
+    source_filter: str | None = None,
+    include_shorter: bool = False
 ) -> list[dict]:
     """
     Get word suggestions matching a pattern, sorted by score.
@@ -35,28 +36,60 @@ def get_word_suggestions(
     if length == 0:
         return []
 
-    # Query answers of matching length, ordered by score descending
+    # Build SQL LIKE pattern (underscores already match single chars in LIKE)
+    like_pattern = pattern_upper
+
+    # Query answers matching length and pattern, ordered by score descending
     query = db.query(Answer).filter(Answer.length == length)
+    
+    # Only apply LIKE if there are known letters
+    if '_' * length != pattern_upper:
+        query = query.filter(Answer.word.like(like_pattern))
+        
     if source_filter:
         query = query.filter(Answer.source.contains(source_filter))
-    query = query.order_by(desc(Answer.score))
-    candidates = query.all()
+        
+    query = query.order_by(desc(Answer.score)).limit(limit)
+    matching_answers = query.all()
 
-    # Build regex for pattern matching
-    # Escape special regex characters except underscores (which become .)
-    regex_chars = []
-    for char in pattern_upper:
-        if char == '_':
-            regex_chars.append('.')
-        else:
-            regex_chars.append(re.escape(char))
-    regex_pattern = "^" + "".join(regex_chars) + "$"
-    regex = re.compile(regex_pattern)
-
-    # Filter candidates (already sorted by score from query)
+    # Build response format
     matching = []
-    for answer in candidates:
-        if regex.match(answer.word):
+    for answer in matching_answers:
+        matching.append({
+            "id": answer.id,
+            "word": answer.word,
+            "display": answer.display or answer.word,
+            "length": answer.length,
+            "score": answer.score or 100,
+            "source": answer.source or 'user',
+            "is_phrase": answer.is_phrase or False,
+            "clues": [
+                {
+                    "id": c.id,
+                    "clue_text": c.clue_text,
+                    "difficulty": c.difficulty,
+                    "tags": c.tags
+                }
+                for c in answer.clues
+            ]
+        })
+
+    if include_shorter and length > 3:
+        shorter_answers = []
+        # Get top words for each shorter length down to 3
+        for k in range(length - 1, 2, -1):
+            short_pattern = pattern_upper[:k]
+            q = db.query(Answer).filter(Answer.length == k)
+            if '_' * k != short_pattern:
+                q = q.filter(Answer.word.like(short_pattern))
+            if source_filter:
+                q = q.filter(Answer.source.contains(source_filter))
+            q = q.order_by(desc(Answer.score)).limit(15)
+            shorter_answers.extend(q.all())
+            
+        shorter_answers.sort(key=lambda x: -(x.score or 0))
+        # Take the top `limit` shorter words overall
+        for answer in shorter_answers[:limit]:
             matching.append({
                 "id": answer.id,
                 "word": answer.word,
@@ -75,9 +108,6 @@ def get_word_suggestions(
                     for c in answer.clues
                 ]
             })
-
-            if len(matching) >= limit:
-                break
 
     return matching
 

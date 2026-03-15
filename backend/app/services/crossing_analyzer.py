@@ -299,8 +299,12 @@ def get_suggestions_with_crossings(
     # Ensure index is built
     build_crossing_index(db)
 
-    # Get basic suggestions (sorted by word score)
-    suggestions = get_word_suggestions(db, _extract_pattern(grid, row, col, direction), limit)
+    # Get a larger pool of basic suggestions (sorted by word score)
+    # We want enough candidates so we don't miss words with good crossings
+    # even if they have slightly lower word scores.
+    candidate_limit = max(1000, limit * 10)
+    pattern = _extract_pattern(grid, row, col, direction)
+    suggestions = get_word_suggestions(db, pattern, candidate_limit, include_shorter=True)
 
     if not suggestions:
         return []
@@ -318,10 +322,19 @@ def get_suggestions_with_crossings(
             'crossing_details': crossing_details
         })
 
-    # Sort by crossing_score descending, then by word score descending
-    results.sort(key=lambda x: (-x['crossing_score'], -(x.get('score', 0) or 0)))
+    # Sort by exact length first, then crossing_score descending, then word score descending
+    pattern_len = len(pattern)
+    results.sort(key=lambda x: (
+        x['length'] != pattern_len,
+        -x['crossing_score'],
+        -(x.get('score', 0) or 0)
+    ))
 
-    return results
+    # Return top `limit` exact length words + top `limit` shorter words
+    exact_matches = [r for r in results if r['length'] == pattern_len][:limit]
+    shorter_matches = [r for r in results if r['length'] < pattern_len][:limit]
+    
+    return exact_matches + shorter_matches
 
 
 def _extract_pattern(grid: list[list[dict]], row: int, col: int, direction: str) -> str:

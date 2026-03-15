@@ -39,8 +39,23 @@ def get_severity(fill_count: int, is_complete: bool = False) -> str:
         return 'danger'
 
 
-# Cache for empty slot counts by length (only ~12 possible lengths)
+# Caches to avoid repeated database queries
 _length_cache: dict[int, int] = {}
+_words_by_length: dict[int, list[str]] = {}
+_pattern_cache: dict[str, int] = {}
+
+
+def get_words_by_length(db: Session, length: int) -> list[str]:
+    """
+    Get all words of a specific length. Cached for performance.
+    """
+    if length in _words_by_length:
+        return _words_by_length[length]
+        
+    candidates = db.query(Answer.word).filter(Answer.length == length).all()
+    words = [word for (word,) in candidates]
+    _words_by_length[length] = words
+    return words
 
 
 def get_count_by_length(db: Session, length: int) -> int:
@@ -57,9 +72,11 @@ def get_count_by_length(db: Session, length: int) -> int:
 
 
 def clear_length_cache():
-    """Clear the length cache (useful for testing or after imports)."""
-    global _length_cache
+    """Clear caches (useful for testing or after imports)."""
+    global _length_cache, _words_by_length, _pattern_cache
     _length_cache = {}
+    _words_by_length = {}
+    _pattern_cache = {}
 
 
 def count_matching_words(db: Session, pattern: str) -> int:
@@ -79,6 +96,10 @@ def count_matching_words(db: Session, pattern: str) -> int:
     if pattern_upper == '_' * length:
         return get_count_by_length(db, length)
 
+    # Check pattern cache
+    if pattern_upper in _pattern_cache:
+        return _pattern_cache[pattern_upper]
+
     # Build regex for pattern matching
     regex_chars = []
     for char in pattern_upper:
@@ -89,14 +110,15 @@ def count_matching_words(db: Session, pattern: str) -> int:
     regex_pattern = "^" + "".join(regex_chars) + "$"
     regex = re.compile(regex_pattern)
 
-    # Query candidates by length and filter with regex
-    candidates = db.query(Answer.word).filter(Answer.length == length).all()
+    # Get cached words by length and filter with regex
+    words = get_words_by_length(db, length)
 
     count = 0
-    for (word,) in candidates:
+    for word in words:
         if regex.match(word):
             count += 1
 
+    _pattern_cache[pattern_upper] = count
     return count
 
 

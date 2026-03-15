@@ -171,10 +171,12 @@ export async function getWordSuggestions(params: {
 export async function suggestWords(params: {
   pattern: string;
   limit?: number;
+  include_shorter?: boolean;
 }): Promise<WordSuggestion[]> {
   const searchParams = new URLSearchParams();
   searchParams.set('pattern', params.pattern);
   if (params.limit) searchParams.set('limit', params.limit.toString());
+  if (params.include_shorter) searchParams.set('include_shorter', 'true');
 
   const response = await fetch(`${API_BASE}/answers/suggest?${searchParams.toString()}`);
   if (!response.ok) throw new Error('Failed to get word suggestions');

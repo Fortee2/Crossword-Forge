@@ -65,6 +65,7 @@ export function WordSuggestions({ selectedWord, onSelectWord, onSelectClue, grid
       const results = await suggestWords({
         pattern: selectedWord.word,
         limit: 30,
+        include_shorter: true,
       });
 
       // Check if this request is still current
@@ -225,24 +226,46 @@ export function WordSuggestions({ selectedWord, onSelectWord, onSelectClue, grid
                   className="suggestion-header"
                   onClick={() => handleWordClick(suggestion)}
                 >
-                  <div className="suggestion-word-info">
-                    <span className={`suggestion-word ${isUnfillable ? 'grayed' : ''}`}>
-                      {suggestion.display || suggestion.word}
-                    </span>
+                  <div>
+                    <div className="suggestion-word-info">
+                      <span className={`suggestion-word ${isUnfillable ? 'grayed' : ''}`}>
+                        {suggestion.display || suggestion.word}
+                      </span>
                     <span className="suggestion-score" title={`Word score: ${suggestion.score || 100}`}>
                       {suggestion.score || 100}
                     </span>
-                    {suggestion.crossing_score !== undefined && (
-                      <span
-                        className={`crossing-score ${crossingClass}`}
-                        title={getCrossingScoreLabel(suggestion.crossing_score)}
-                      >
-                        {isUnfillable && <span className="warning-icon">!</span>}
-                        {suggestion.crossing_score >= 99999 ? '\u221e' : suggestion.crossing_score}
-                      </span>
+                    {suggestion.length < selectedWord.word.length && (
+                      <span className="black-square-icon" title="Automatically places a black square after the word">⬛</span>
                     )}
-                    {suggestion.source && suggestion.source !== 'user' && (
-                      <span className="suggestion-source">{suggestion.source}</span>
+                    {suggestion.crossing_score !== undefined && (
+                        <span
+                          className={`crossing-score ${crossingClass}`}
+                          title={getCrossingScoreLabel(suggestion.crossing_score)}
+                        >
+                          {isUnfillable && <span className="warning-icon">!</span>}
+                          {suggestion.crossing_score >= 99999 ? '\u221e' : suggestion.crossing_score}
+                        </span>
+                      )}
+                      {suggestion.source && suggestion.source !== 'user' && (
+                        <span className="suggestion-source">{suggestion.source}</span>
+                      )}
+                    </div>
+                    {suggestion.crossing_details && suggestion.crossing_details.length > 0 && (
+                      <div className="crossing-map">
+                        {suggestion.word.split('').map((letter, i) => {
+                          const detail = suggestion.crossing_details?.find(d => d.position === i);
+                          if (!detail) return <div key={i} className="crossing-dot crossing-none" title={`${letter}: No crossing`} >{letter}</div>;
+                          return (
+                            <div 
+                              key={i} 
+                              className={`crossing-dot ${getCrossingScoreClass(detail.fill_count)}`}
+                              title={`${letter} (Pos ${i+1}): ${detail.fill_count >= 99999 ? 'unconstrained' : detail.fill_count} ${detail.direction} words`}
+                            >
+                              {letter}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                   <div className="suggestion-actions">

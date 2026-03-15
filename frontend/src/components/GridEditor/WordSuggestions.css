@@ -252,6 +252,12 @@
   color: var(--text-secondary);
 }
 
+.black-square-icon {
+  font-size: 0.875rem;
+  margin-left: 0.25rem;
+  color: var(--text-primary);
+}
+
 .fill-btn-warning {
   background: #f97316;
 }
@@ -343,5 +349,47 @@
   margin-left: 0.5rem;
   font-size: 0.75rem;
   font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* Crossing map visualization */
+.crossing-map {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.crossing-dot {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-family: monospace;
+  font-weight: bold;
+  cursor: help;
+  color: #fff;
+}
+
+.crossing-dot.crossing-good {
+  background: #10b981;
+}
+
+.crossing-dot.crossing-okay {
+  background: #3b82f6;
+}
+
+.crossing-dot.crossing-tight {
+  background: #f59e0b;
+}
+
+.crossing-dot.crossing-danger {
+  background: #ef4444;
+}
+
+.crossing-dot.crossing-none {
+  background: var(--border-color);
   color: var(--text-secondary);
 }

@@ -148,6 +148,7 @@ def suggest_words(
     pattern: str,
     limit: int = 20,
     source: Optional[str] = None,
+    include_shorter: bool = False,
     db: Session = Depends(get_db)
 ):
     """
@@ -157,7 +158,7 @@ def suggest_words(
     if not pattern or len(pattern) < 2:
         raise HTTPException(status_code=400, detail="Pattern must be at least 2 characters")
 
-    suggestions = get_word_suggestions(db, pattern, limit, source_filter=source)
+    suggestions = get_word_suggestions(db, pattern, limit, source_filter=source, include_shorter=include_shorter)
 
     return [
         WordSuggestionResponse(
