@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GridEditor, createEmptyGrid } from './components/GridEditor';
 import { ClueDatabase } from './components/ClueDatabase';
+import { WordSearchEditor } from './components/WordSearchEditor';
 import { GridCell, Puzzle, WordPlacement } from './types';
 import { createPuzzle, getPuzzles, getPuzzle, updatePuzzle, deletePuzzle } from './api/puzzles';
 import './App.css';
 
-type View = 'editor' | 'database';
+type View = 'editor' | 'database' | 'wordsearch';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('editor');
@@ -134,6 +135,12 @@ function App() {
             >
               Clue Database
             </button>
+            <button
+              className={`nav-tab ${currentView === 'wordsearch' ? 'active' : ''}`}
+              onClick={() => setCurrentView('wordsearch')}
+            >
+              Word Search
+            </button>
           </nav>
         </div>
         {currentView === 'editor' && (
@@ -205,7 +212,7 @@ function App() {
       )}
 
       <main className="app-main">
-        {currentView === 'editor' ? (
+        {currentView === 'editor' && (
           <GridEditor
             initialGrid={grid}
             initialWordPlacements={initialWordPlacements}
@@ -213,9 +220,9 @@ function App() {
             onWordPlacementsChange={handleWordPlacementsChange}
             key={currentPuzzleId}
           />
-        ) : (
-          <ClueDatabase />
         )}
+        {currentView === 'database' && <ClueDatabase />}
+        {currentView === 'wordsearch' && <WordSearchEditor />}
       </main>
     </div>
   );

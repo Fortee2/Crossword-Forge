@@ -1,0 +1,59 @@
+import { WordSearchPuzzle, WordSearchPlacement, WordSearchConfig } from '../types';
+
+const API_BASE = 'http://localhost:8000';
+
+export async function createWordSearch(data: {
+  title: string;
+  grid: string[][];
+  words: string[];
+  placements: WordSearchPlacement[];
+  config: WordSearchConfig;
+  status?: string;
+}): Promise<WordSearchPuzzle> {
+  const response = await fetch(`${API_BASE}/word-searches`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to create word search');
+  return response.json();
+}
+
+export async function getWordSearches(): Promise<WordSearchPuzzle[]> {
+  const response = await fetch(`${API_BASE}/word-searches`);
+  if (!response.ok) throw new Error('Failed to fetch word searches');
+  return response.json();
+}
+
+export async function getWordSearch(id: number): Promise<WordSearchPuzzle> {
+  const response = await fetch(`${API_BASE}/word-searches/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch word search');
+  return response.json();
+}
+
+export async function updateWordSearch(
+  id: number,
+  data: Partial<{
+    title: string;
+    grid: string[][];
+    words: string[];
+    placements: WordSearchPlacement[];
+    config: WordSearchConfig;
+    status: string;
+  }>
+): Promise<WordSearchPuzzle> {
+  const response = await fetch(`${API_BASE}/word-searches/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to update word search');
+  return response.json();
+}
+
+export async function deleteWordSearch(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/word-searches/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete word search');
+}

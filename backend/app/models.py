@@ -45,3 +45,17 @@ class Puzzle(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class WordSearch(Base):
+    __tablename__ = "word_searches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False, default="Untitled Word Search")
+    grid = Column(JSON, nullable=False)        # string[][]
+    words = Column(JSON, nullable=False)       # string[]
+    placements = Column(JSON, nullable=False)  # WordSearchPlacement[]
+    config = Column(JSON, nullable=False)      # WordSearchConfig
+    status = Column(String(50), default="draft")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

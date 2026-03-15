@@ -148,3 +148,37 @@ export interface FillabilityResult {
 export interface CrossingSuggestionsResult {
   suggestions: WordSuggestion[];
 }
+
+// Word Search types
+export type WordSearchDirection = 'E' | 'W' | 'N' | 'S' | 'NE' | 'NW' | 'SE' | 'SW';
+
+export interface WordSearchPlacement {
+  word: string;
+  row: number;
+  col: number;
+  direction: WordSearchDirection;
+}
+
+export interface WordSearchConfig {
+  rows: number;
+  cols: number;
+  allowedDirections: WordSearchDirection[];
+}
+
+export interface WordSearchPuzzle {
+  id: number;
+  title: string;
+  grid: string[][];
+  words: string[];
+  placements: WordSearchPlacement[];
+  config: WordSearchConfig;
+  status: 'draft' | 'complete' | 'published';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WordSearchGenerationResult {
+  grid: string[][];
+  placements: WordSearchPlacement[];
+  unplaced: string[];
+}
