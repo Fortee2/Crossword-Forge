@@ -3,7 +3,7 @@ import { GridEditor, createEmptyGrid } from './components/GridEditor';
 import { ClueDatabase } from './components/ClueDatabase';
 import { WordSearchEditor } from './components/WordSearchEditor';
 import { GridCell, Puzzle, WordPlacement } from './types';
-import { createPuzzle, getPuzzles, getPuzzle, updatePuzzle, deletePuzzle } from './api/puzzles';
+import { createPuzzle, getPuzzles, getPuzzle, updatePuzzle, deletePuzzle, exportPuzzlePdf } from './api/puzzles';
 import './App.css';
 
 type View = 'editor' | 'database' | 'wordsearch';
@@ -20,6 +20,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPuzzleList, setShowPuzzleList] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -100,6 +101,22 @@ function App() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!currentPuzzleId) {
+      showMessage('error', 'Save the puzzle first before exporting');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await exportPuzzlePdf(currentPuzzleId);
+      showMessage('success', 'PDF exported!');
+    } catch {
+      showMessage('error', 'Failed to export PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleNew = () => {
     setGrid(createEmptyGrid());
     setPuzzleTitle('Untitled Puzzle');
@@ -163,6 +180,14 @@ function App() {
               className="btn btn-secondary"
             >
               {showPuzzleList ? 'Hide List' : 'Load'}
+            </button>
+            <button
+              onClick={handleExportPdf}
+              className="btn btn-secondary"
+              disabled={isExporting || !currentPuzzleId}
+              title={!currentPuzzleId ? 'Save puzzle first' : 'Export as PDF'}
+            >
+              {isExporting ? 'Exporting...' : 'Export PDF'}
             </button>
           </div>
         )}

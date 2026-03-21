@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List, Optional, Any
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from ..services.grid_validator import validate_grid
 from ..services.word_suggester import get_word_suggestions, get_suggestions_for_slot
 from ..services.fillability_analyzer import analyze_fillability
 from ..services.crossing_analyzer import get_suggestions_with_crossings
+from ..services.pdf_exporter import generate_puzzle_pdf
 
 
 router = APIRouter(prefix="/puzzles", tags=["puzzles"])
@@ -140,6 +142,34 @@ def delete_puzzle(puzzle_id: int, db: Session = Depends(get_db)):
     db.delete(puzzle)
     db.commit()
     return {"message": "Puzzle deleted successfully"}
+
+
+@router.get("/{puzzle_id}/pdf")
+def export_puzzle_pdf(
+    puzzle_id: int,
+    include_answer_key: bool = True,
+    db: Session = Depends(get_db),
+):
+    """Export a puzzle as a PDF file."""
+    puzzle = db.query(Puzzle).filter(Puzzle.id == puzzle_id).first()
+    if not puzzle:
+        raise HTTPException(status_code=404, detail="Puzzle not found")
+
+    pdf_bytes = generate_puzzle_pdf(
+        title=puzzle.title,
+        grid_data=puzzle.grid_data,
+        word_placements=puzzle.word_placements,
+        include_answer_key=include_answer_key,
+    )
+
+    safe_title = "".join(c for c in puzzle.title if c.isalnum() or c in " -_").strip() or "puzzle"
+    filename = f"{safe_title}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/validate", response_model=ValidationResponse)
