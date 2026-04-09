@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WordSearchConfig, WordSearchPlacement, WordSearchPuzzle } from '../../types';
 import { generateWordSearch } from '../../utils/wordSearchGenerator';
-import { createWordSearch, getWordSearches, getWordSearch, updateWordSearch, deleteWordSearch } from '../../api/wordSearches';
+import { createWordSearch, getWordSearches, getWordSearch, updateWordSearch, deleteWordSearch, exportWordSearchPdf } from '../../api/wordSearches';
 import { WordSearchGrid } from './WordSearchGrid';
 import { WordListPanel } from './WordListPanel';
 import { WordSearchConfigPanel } from './WordSearchConfigPanel';
@@ -30,6 +30,7 @@ export function WordSearchEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -138,6 +139,22 @@ export function WordSearchEditor() {
     setShowPuzzleList(false);
   };
 
+  const handleExportPdf = async () => {
+    if (!currentId) {
+      showMessage('error', 'Save the puzzle first before exporting.');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await exportWordSearchPdf(currentId);
+      showMessage('success', 'PDF exported!');
+    } catch {
+      showMessage('error', 'Failed to export PDF.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleAddWordsFromDb = (newWords: string[]) => {
     const merged = Array.from(new Set([...words, ...newWords]));
     setWords(merged);
@@ -162,6 +179,14 @@ export function WordSearchEditor() {
           onClick={() => setShowPuzzleList(s => !s)}
         >
           {showPuzzleList ? 'Hide List' : 'Load'}
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={handleExportPdf}
+          disabled={isExporting || !currentId}
+          title={!currentId ? 'Save puzzle first' : 'Export as PDF'}
+        >
+          {isExporting ? 'Exporting...' : 'Export PDF'}
         </button>
         {grid.length > 0 && (
           <label className="ws-highlight-toggle">

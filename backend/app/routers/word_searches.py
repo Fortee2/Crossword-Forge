@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List, Optional, Any
 from pydantic import BaseModel
@@ -6,6 +7,7 @@ from datetime import datetime
 
 from ..database import get_db
 from ..models import WordSearch
+from ..services.pdf_exporter import generate_word_search_pdf
 
 
 router = APIRouter(prefix="/word-searches", tags=["word-searches"])
@@ -111,6 +113,35 @@ def update_word_search(ws_id: int, data: WordSearchUpdate, db: Session = Depends
     db.commit()
     db.refresh(ws)
     return ws
+
+
+@router.get("/{ws_id}/pdf")
+def export_word_search_pdf(
+    ws_id: int,
+    include_answer_key: bool = True,
+    db: Session = Depends(get_db),
+):
+    """Export a word search puzzle as a PDF file."""
+    ws = db.query(WordSearch).filter(WordSearch.id == ws_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Word search not found")
+
+    pdf_bytes = generate_word_search_pdf(
+        title=ws.title,
+        grid=ws.grid,
+        words=ws.words,
+        placements=ws.placements,
+        include_answer_key=include_answer_key,
+    )
+
+    safe_title = "".join(c for c in ws.title if c.isalnum() or c in " -_").strip() or "word-search"
+    filename = f"{safe_title}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.delete("/{ws_id}")

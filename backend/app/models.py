@@ -47,6 +47,21 @@ class Puzzle(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class Book(Base):
+    __tablename__ = "books"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False, default="Untitled Book")
+    subtitle = Column(Text, nullable=True)
+    author = Column(String(255), nullable=True)
+    book_type = Column(String(20), nullable=False)  # "crossword" | "wordsearch"
+    puzzle_ids = Column(JSON, nullable=False, default=list)  # ordered list of integer IDs
+    status = Column(String(50), default="draft")  # draft | exported
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    exported_at = Column(DateTime(timezone=True), nullable=True)
+
+
 class WordSearch(Base):
     __tablename__ = "word_searches"
 

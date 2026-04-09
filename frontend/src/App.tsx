@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { GridEditor, createEmptyGrid } from './components/GridEditor';
 import { ClueDatabase } from './components/ClueDatabase';
 import { WordSearchEditor } from './components/WordSearchEditor';
+import { BookBuilder } from './components/BookBuilder';
 import { GridCell, Puzzle, WordPlacement } from './types';
 import { createPuzzle, getPuzzles, getPuzzle, updatePuzzle, deletePuzzle, exportPuzzlePdf } from './api/puzzles';
 import './App.css';
 
-type View = 'editor' | 'database' | 'wordsearch';
+type View = 'editor' | 'database' | 'wordsearch' | 'bookbuilder';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('editor');
@@ -158,6 +159,12 @@ function App() {
             >
               Word Search
             </button>
+            <button
+              className={`nav-tab ${currentView === 'bookbuilder' ? 'active' : ''}`}
+              onClick={() => setCurrentView('bookbuilder')}
+            >
+              Book Builder
+            </button>
           </nav>
         </div>
         {currentView === 'editor' && (
@@ -248,6 +255,7 @@ function App() {
         )}
         {currentView === 'database' && <ClueDatabase />}
         {currentView === 'wordsearch' && <WordSearchEditor />}
+        {currentView === 'bookbuilder' && <BookBuilder />}
       </main>
     </div>
   );

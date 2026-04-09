@@ -182,3 +182,24 @@ export interface WordSearchGenerationResult {
   placements: WordSearchPlacement[];
   unplaced: string[];
 }
+
+// Book types
+export interface BookResolvedItem {
+  id: number;
+  title: string;
+  status: string;
+}
+
+export interface Book {
+  id: number;
+  title: string;
+  subtitle?: string;
+  author?: string;
+  book_type: 'crossword' | 'wordsearch';
+  puzzle_ids: number[];
+  resolved_items: BookResolvedItem[];
+  status: 'draft' | 'exported';
+  created_at: string;
+  updated_at: string;
+  exported_at?: string;
+}
