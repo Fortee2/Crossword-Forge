@@ -339,6 +339,106 @@
 }
 
 /* ======================================================
+   Chapter list
+   ====================================================== */
+
+.bb-chapters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bb-chapter {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bb-chapter-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bb-chapter-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: white;
+  background: #4f46e5;
+  border-radius: 50%;
+}
+
+.bb-chapter-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.bb-chapter-name {
+  width: 100%;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.bb-chapter-name:hover,
+.bb-chapter-name:focus {
+  background: var(--surface-color);
+  border-color: var(--border-color);
+  outline: none;
+}
+
+.bb-chapter-desc {
+  width: 100%;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.bb-chapter-desc:hover,
+.bb-chapter-desc:focus {
+  background: var(--surface-color);
+  border-color: var(--border-color);
+  outline: none;
+}
+
+.bb-chapter-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.bb-chapter-puzzles {
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bb-chapter-empty {
+  padding: 0.4rem 0.6rem !important;
+}
+
+/* ======================================================
    Puzzle picker modal
    ====================================================== */
 

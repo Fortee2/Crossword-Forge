@@ -27,6 +27,7 @@ export async function createWordSearch(data: {
   words: string[];
   placements: WordSearchPlacement[];
   config: WordSearchConfig;
+  difficulty_label?: string;
   status?: string;
 }): Promise<WordSearchPuzzle> {
   const response = await fetch(`${API_BASE}/word-searches`, {
@@ -58,6 +59,7 @@ export async function updateWordSearch(
     words: string[];
     placements: WordSearchPlacement[];
     config: WordSearchConfig;
+    difficulty_label: string;
     status: string;
   }>
 ): Promise<WordSearchPuzzle> {

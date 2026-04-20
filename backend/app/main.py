@@ -1,11 +1,25 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from .database import engine, Base
 from .routers import puzzles, answers, word_searches, books
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Migrate existing databases: add new columns if missing
+with engine.connect() as _conn:
+    for _col, _ddl in [
+        ("chapters", "ALTER TABLE books ADD COLUMN chapters JSON"),
+        ("puzzles_difficulty_label", "ALTER TABLE puzzles ADD COLUMN difficulty_label VARCHAR(20)"),
+        ("ws_difficulty_label", "ALTER TABLE word_searches ADD COLUMN difficulty_label VARCHAR(20)"),
+    ]:
+        try:
+            _conn.execute(text(_ddl))
+            _conn.commit()
+        except Exception:
+            pass  # column already exists
 
 app = FastAPI(
     title="CrosswordForge API",

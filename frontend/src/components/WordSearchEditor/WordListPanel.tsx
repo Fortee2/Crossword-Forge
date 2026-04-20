@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { WordSearchPlacement } from '../../types';
+import { WordSearchConfig, WordSearchPlacement } from '../../types';
+
+function getWordLengthLimits(config: WordSearchConfig): { min: number; max: number } {
+  const size = Math.min(config.rows, config.cols);
+  if (size <= 10) return { min: 3, max: 7 };
+  if (size <= 15) return { min: 4, max: 10 };
+  return { min: 5, max: 15 };
+}
 
 interface WordListPanelProps {
   words: string[];
@@ -10,6 +17,7 @@ interface WordListPanelProps {
   onWordSelect: (word: string | null) => void;
   onWordsChange: (words: string[]) => void;
   onOpenDbSearch: () => void;
+  config: WordSearchConfig;
 }
 
 export function WordListPanel({
@@ -21,27 +29,44 @@ export function WordListPanel({
   onWordSelect,
   onWordsChange,
   onOpenDbSearch,
+  config,
 }: WordListPanelProps) {
   const [inputText, setInputText] = useState('');
   const [addInput, setAddInput] = useState('');
+  const [validationMsg, setValidationMsg] = useState<string | null>(null);
 
   const placedSet = new Set(placements.map(p => p.word));
   const unplacedSet = new Set(unplaced);
+  const { min, max } = getWordLengthLimits(config);
+
+  const showValidation = (msg: string) => {
+    setValidationMsg(msg);
+    setTimeout(() => setValidationMsg(null), 3000);
+  };
 
   const handleBulkBlur = () => {
     if (!inputText.trim()) return;
-    const newWords = inputText
+    const cleaned = inputText
       .split('\n')
       .map(w => w.trim().toUpperCase().replace(/[^A-Z]/g, ''))
       .filter(w => w.length > 0);
-    const merged = Array.from(new Set([...words, ...newWords]));
+    const valid = cleaned.filter(w => w.length >= min && w.length <= max);
+    const skipped = cleaned.length - valid.length;
+    const merged = Array.from(new Set([...words, ...valid]));
     onWordsChange(merged);
     setInputText('');
+    if (skipped > 0) {
+      showValidation(`${skipped} word${skipped !== 1 ? 's' : ''} skipped — must be ${min}–${max} letters for a ${config.rows}×${config.cols} grid.`);
+    }
   };
 
   const handleAdd = () => {
     const word = addInput.trim().toUpperCase().replace(/[^A-Z]/g, '');
     if (!word) return;
+    if (word.length < min || word.length > max) {
+      showValidation(`"${word}" must be ${min}–${max} letters for a ${config.rows}×${config.cols} grid.`);
+      return;
+    }
     if (!words.includes(word)) {
       onWordsChange([...words, word]);
     }
@@ -64,6 +89,10 @@ export function WordListPanel({
         <h3>Word List</h3>
         <span className="ws-word-count">{words.length} word{words.length !== 1 ? 's' : ''}</span>
       </div>
+
+      {validationMsg && (
+        <div className="ws-validation-msg">{validationMsg}</div>
+      )}
 
       <div className="ws-add-row">
         <input

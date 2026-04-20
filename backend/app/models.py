@@ -40,6 +40,7 @@ class Puzzle(Base):
     grid_data = Column(JSON, nullable=False)
     word_placements = Column(JSON, nullable=True)
     difficulty = Column(Integer, nullable=True)
+    difficulty_label = Column(String(20), nullable=True)  # 'Easy'|'Medium'|'Hard'|'Expert'
     status = Column(String(50), default="draft")
     theme = Column(String(255), nullable=True)
     notes = Column(Text, nullable=True)
@@ -56,6 +57,7 @@ class Book(Base):
     author = Column(String(255), nullable=True)
     book_type = Column(String(20), nullable=False)  # "crossword" | "wordsearch"
     puzzle_ids = Column(JSON, nullable=False, default=list)  # ordered list of integer IDs
+    chapters = Column(JSON, nullable=True)  # [{id, name, description, puzzle_ids}]
     status = Column(String(50), default="draft")  # draft | exported
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -71,6 +73,7 @@ class WordSearch(Base):
     words = Column(JSON, nullable=False)       # string[]
     placements = Column(JSON, nullable=False)  # WordSearchPlacement[]
     config = Column(JSON, nullable=False)      # WordSearchConfig
+    difficulty_label = Column(String(20), nullable=True)  # 'Easy'|'Medium'|'Hard'|'Expert'
     status = Column(String(50), default="draft")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

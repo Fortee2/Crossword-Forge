@@ -16,6 +16,7 @@ const DEFAULT_CONFIG: WordSearchConfig = {
 
 export function WordSearchEditor() {
   const [title, setTitle] = useState('Untitled Word Search');
+  const [difficulty, setDifficulty] = useState('');
   const [words, setWords] = useState<string[]>([]);
   const [config, setConfig] = useState<WordSearchConfig>(DEFAULT_CONFIG);
   const [grid, setGrid] = useState<string[][]>([]);
@@ -77,10 +78,10 @@ export function WordSearchEditor() {
     setIsSaving(true);
     try {
       if (currentId) {
-        await updateWordSearch(currentId, { title, grid, words, placements, config });
+        await updateWordSearch(currentId, { title, grid, words, placements, config, difficulty_label: difficulty || undefined });
         showMessage('success', 'Saved!');
       } else {
-        const created = await createWordSearch({ title, grid, words, placements, config });
+        const created = await createWordSearch({ title, grid, words, placements, config, difficulty_label: difficulty || undefined });
         setCurrentId(created.id);
         showMessage('success', 'Created!');
       }
@@ -97,6 +98,7 @@ export function WordSearchEditor() {
     try {
       const ws = await getWordSearch(id);
       setTitle(ws.title);
+      setDifficulty(ws.difficulty_label || '');
       setWords(ws.words);
       setConfig(ws.config);
       setGrid(ws.grid);
@@ -128,6 +130,7 @@ export function WordSearchEditor() {
 
   const handleNew = () => {
     setTitle('Untitled Word Search');
+    setDifficulty('');
     setWords([]);
     setConfig(DEFAULT_CONFIG);
     setGrid([]);
@@ -156,8 +159,14 @@ export function WordSearchEditor() {
   };
 
   const handleAddWordsFromDb = (newWords: string[]) => {
-    const merged = Array.from(new Set([...words, ...newWords]));
+    const size = Math.min(config.rows, config.cols);
+    const { min, max } = size <= 10 ? { min: 3, max: 7 } : size <= 15 ? { min: 4, max: 10 } : { min: 5, max: 15 };
+    const valid = newWords.filter(w => w.length >= min && w.length <= max);
+    const merged = Array.from(new Set([...words, ...valid]));
     setWords(merged);
+    if (valid.length < newWords.length) {
+      showMessage('error', `${newWords.length - valid.length} word(s) skipped — must be ${min}–${max} letters for a ${config.rows}×${config.cols} grid.`);
+    }
   };
 
   return (
@@ -170,6 +179,18 @@ export function WordSearchEditor() {
           onChange={e => setTitle(e.target.value)}
           placeholder="Word search title..."
         />
+        <select
+          className="difficulty-select"
+          value={difficulty}
+          onChange={e => setDifficulty(e.target.value)}
+          title="Difficulty"
+        >
+          <option value="">Difficulty...</option>
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Hard">Hard</option>
+          <option value="Expert">Expert</option>
+        </select>
         <button className="btn btn-secondary" onClick={handleNew}>New</button>
         <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
           {isSaving ? 'Saving...' : currentId ? 'Save' : 'Create'}
@@ -218,6 +239,11 @@ export function WordSearchEditor() {
                 <li key={ws.id} className="puzzle-item">
                   <div className="puzzle-info">
                     <span className="puzzle-name">{ws.title}</span>
+                    {ws.difficulty_label && (
+                      <span className={`difficulty-badge difficulty-${ws.difficulty_label.toLowerCase()}`}>
+                        {ws.difficulty_label}
+                      </span>
+                    )}
                     <span className="puzzle-date">
                       {new Date(ws.updated_at).toLocaleDateString()}
                     </span>
@@ -262,6 +288,7 @@ export function WordSearchEditor() {
             onWordSelect={setSelectedWord}
             onWordsChange={words => { setWords(words); setPlacements([]); setUnplaced([]); setGrid([]); }}
             onOpenDbSearch={() => setShowDbModal(true)}
+            config={config}
           />
         </div>
 

@@ -25,6 +25,7 @@ export async function createPuzzle(data: {
   title: string;
   grid_data: GridCell[][];
   word_placements?: WordPlacement[];
+  difficulty_label?: string;
   status?: string;
   theme?: string;
   notes?: string;
@@ -56,6 +57,7 @@ export async function updatePuzzle(
     title: string;
     grid_data: GridCell[][];
     word_placements: WordPlacement[];
+    difficulty_label: string;
     status: string;
     theme: string;
     notes: string;

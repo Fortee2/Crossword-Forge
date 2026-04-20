@@ -11,11 +11,47 @@ const ALL_DIRECTIONS: { value: WordSearchDirection; label: string }[] = [
   { value: 'NW', label: '↖ Northwest (diagonal)' },
 ];
 
+const DIFFICULTY_PRESETS: {
+  label: string;
+  description: string;
+  rows: number;
+  cols: number;
+  directions: WordSearchDirection[];
+}[] = [
+  {
+    label: 'Easy',
+    description: '10×10 · 2 directions',
+    rows: 10,
+    cols: 10,
+    directions: ['E', 'S'],
+  },
+  {
+    label: 'Medium',
+    description: '15×15 · 4 directions',
+    rows: 15,
+    cols: 15,
+    directions: ['E', 'S', 'SE', 'SW'],
+  },
+  {
+    label: 'Hard',
+    description: '20×20 · 6 directions',
+    rows: 20,
+    cols: 20,
+    directions: ['E', 'W', 'S', 'N', 'SE', 'NE'],
+  },
+    {
+    label: 'Expert',
+    description: '20×20 · all 8 directions',
+    rows: 20,
+    cols: 20,
+    directions: ['E', 'W', 'S', 'N', 'SE', 'SW', 'NE', 'NW'],
+  },
+];
+
 const SIZE_PRESETS = [
   { label: '10×10', rows: 10, cols: 10 },
   { label: '15×15', rows: 15, cols: 15 },
   { label: '20×20', rows: 20, cols: 20 },
-  { label: 'Custom', rows: 0, cols: 0 },
 ];
 
 interface WordSearchConfigPanelProps {
@@ -38,6 +74,18 @@ export function WordSearchConfigPanel({
     ? `${config.rows}×${config.cols}`
     : 'Custom';
 
+  const activeDifficulty = DIFFICULTY_PRESETS.find(
+    p =>
+      p.rows === config.rows &&
+      p.cols === config.cols &&
+      p.directions.length === config.allowedDirections.length &&
+      p.directions.every(d => config.allowedDirections.includes(d))
+  );
+
+  const handleDifficultyPreset = (preset: typeof DIFFICULTY_PRESETS[number]) => {
+    onChange({ ...config, rows: preset.rows, cols: preset.cols, allowedDirections: preset.directions });
+  };
+
   const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const preset = SIZE_PRESETS.find(p => p.label === e.target.value);
     if (preset && preset.rows !== 0) {
@@ -57,6 +105,23 @@ export function WordSearchConfigPanel({
   return (
     <div className="ws-config-panel">
       <h3>Configuration</h3>
+
+      <div className="ws-config-section">
+        <label className="ws-label">Difficulty</label>
+        <div className="ws-difficulty-presets">
+          {DIFFICULTY_PRESETS.map(preset => (
+            <button
+              key={preset.label}
+              className={`ws-difficulty-btn ws-difficulty-${preset.label.toLowerCase()}${activeDifficulty?.label === preset.label ? ' active' : ''}`}
+              onClick={() => handleDifficultyPreset(preset)}
+              title={preset.description}
+            >
+              <span className="ws-difficulty-label">{preset.label}</span>
+              <span className="ws-difficulty-desc">{preset.description}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="ws-config-section">
         <label className="ws-label">Grid Size</label>

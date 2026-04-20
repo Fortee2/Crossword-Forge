@@ -9,11 +9,16 @@ interface WordSearchGridProps {
 }
 
 export function WordSearchGrid({ grid, placements, selectedWord, highlightMode }: WordSearchGridProps) {
-  // Build a Set of "row,col" keys for the selected word's cells
+  // Build a Set of "row,col" keys to highlight.
+  // • No highlight mode → empty set
+  // • Highlight mode, no word selected → highlight all placed words
+  // • Highlight mode, word selected → highlight only that word
   const highlightedCells = new Set<string>();
-  if (highlightMode && selectedWord) {
-    const placement = placements.find(p => p.word === selectedWord);
-    if (placement) {
+  if (highlightMode) {
+    const targets = selectedWord
+      ? placements.filter(p => p.word === selectedWord)
+      : placements;
+    for (const placement of targets) {
       for (const { row, col } of getPlacementCells(placement)) {
         highlightedCells.add(`${row},${col}`);
       }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Book, BookResolvedItem } from '../../types';
+import { Book, BookChapter, BookResolvedItem } from '../../types';
 import { createBook, getBooks, getBook, updateBook, deleteBook, exportBookPdf } from '../../api/books';
 import { PuzzlePicker } from './PuzzlePicker';
 import './BookBuilder.css';
@@ -12,10 +12,10 @@ export function BookBuilder() {
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [author, setAuthor] = useState('');
-  const [puzzleIds, setPuzzleIds] = useState<number[]>([]);
-  const [resolvedItems, setResolvedItems] = useState<BookResolvedItem[]>([]);
+  const [chapters, setChapters] = useState<BookChapter[]>([]);
 
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerTargetChapterId, setPickerTargetChapterId] = useState<string | null>(null);
   const [showCreateChoice, setShowCreateChoice] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -56,8 +56,19 @@ export function BookBuilder() {
     setTitle(book.title);
     setSubtitle(book.subtitle || '');
     setAuthor(book.author || '');
-    setPuzzleIds(book.puzzle_ids);
-    setResolvedItems(book.resolved_items || []);
+
+    if (book.chapters && book.chapters.length > 0) {
+      setChapters(book.chapters);
+    } else {
+      // Legacy book or new book — start with one default chapter
+      setChapters([{
+        id: crypto.randomUUID(),
+        name: 'Puzzles',
+        description: '',
+        puzzle_ids: book.puzzle_ids,
+        resolved_items: book.resolved_items || [],
+      }]);
+    }
   };
 
   const handleLoad = async (bookId: number) => {
@@ -81,13 +92,26 @@ export function BookBuilder() {
     }
   };
 
+  const chaptersPayload = () =>
+    chapters.map(ch => ({
+      id: ch.id,
+      name: ch.name,
+      description: ch.description || undefined,
+      puzzle_ids: ch.puzzle_ids,
+    }));
+
   const handleSave = async () => {
     if (!editingBook) return;
     setIsSaving(true);
     try {
-      const updated = await updateBook(editingBook.id, { title, subtitle: subtitle || undefined, author: author || undefined, puzzle_ids: puzzleIds });
+      const updated = await updateBook(editingBook.id, {
+        title,
+        subtitle: subtitle || undefined,
+        author: author || undefined,
+        chapters: chaptersPayload(),
+      });
       setEditingBook(updated);
-      setResolvedItems(updated.resolved_items || []);
+      setChapters(updated.chapters && updated.chapters.length > 0 ? updated.chapters : chapters);
       loadBooks();
       showMessage('success', 'Book saved!');
     } catch {
@@ -99,12 +123,15 @@ export function BookBuilder() {
 
   const handleExport = async () => {
     if (!editingBook) return;
-    // Save first to persist any pending changes
     setIsExporting(true);
     try {
-      await updateBook(editingBook.id, { title, subtitle: subtitle || undefined, author: author || undefined, puzzle_ids: puzzleIds });
+      await updateBook(editingBook.id, {
+        title,
+        subtitle: subtitle || undefined,
+        author: author || undefined,
+        chapters: chaptersPayload(),
+      });
       await exportBookPdf(editingBook.id);
-      // Refresh to get updated status/exported_at
       const updated = await getBook(editingBook.id);
       setEditingBook(updated);
       loadBooks();
@@ -116,51 +143,127 @@ export function BookBuilder() {
     }
   };
 
-  const handleAddPuzzles = (ids: number[]) => {
-    setPuzzleIds(prev => [...prev, ...ids]);
-    // We won't know the titles until we save and reload — mark as needing save
-  };
-
-  const handleRemove = (index: number) => {
-    setPuzzleIds(prev => prev.filter((_, i) => i !== index));
-    setResolvedItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleMoveUp = (index: number) => {
-    if (index === 0) return;
-    setPuzzleIds(prev => {
-      const next = [...prev];
-      [next[index - 1], next[index]] = [next[index], next[index - 1]];
-      return next;
-    });
-    setResolvedItems(prev => {
-      const next = [...prev];
-      [next[index - 1], next[index]] = [next[index], next[index - 1]];
-      return next;
-    });
-  };
-
-  const handleMoveDown = (index: number) => {
-    if (index >= puzzleIds.length - 1) return;
-    setPuzzleIds(prev => {
-      const next = [...prev];
-      [next[index], next[index + 1]] = [next[index + 1], next[index]];
-      return next;
-    });
-    setResolvedItems(prev => {
-      const next = [...prev];
-      [next[index], next[index + 1]] = [next[index + 1], next[index]];
-      return next;
-    });
-  };
-
   const handleBack = () => {
     setEditingBook(null);
     loadBooks();
   };
 
-  // Build a lookup for resolved items by id
-  const resolvedMap = new Map(resolvedItems.map(r => [r.id, r]));
+  // --- Chapter management ---
+
+  const addChapter = () => {
+    setChapters(prev => [...prev, {
+      id: crypto.randomUUID(),
+      name: 'New Chapter',
+      description: '',
+      puzzle_ids: [],
+      resolved_items: [],
+    }]);
+  };
+
+  const updateChapterField = (id: string, field: 'name' | 'description', value: string) => {
+    setChapters(prev => prev.map(ch => ch.id === id ? { ...ch, [field]: value } : ch));
+  };
+
+  const moveChapterUp = (idx: number) => {
+    if (idx === 0) return;
+    setChapters(prev => {
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next;
+    });
+  };
+
+  const moveChapterDown = (idx: number) => {
+    if (idx >= chapters.length - 1) return;
+    setChapters(prev => {
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
+  };
+
+  const deleteChapter = (id: string) => {
+    setChapters(prev => prev.filter(ch => ch.id !== id));
+  };
+
+  // --- Puzzle management within chapters ---
+
+  const openPicker = (chapterId: string) => {
+    setPickerTargetChapterId(chapterId);
+    setShowPicker(true);
+  };
+
+  const handleAddPuzzles = (ids: number[]) => {
+    if (!pickerTargetChapterId) return;
+    setChapters(prev => prev.map(ch => {
+      if (ch.id !== pickerTargetChapterId) return ch;
+      return { ...ch, puzzle_ids: [...ch.puzzle_ids, ...ids] };
+    }));
+  };
+
+  const movePuzzleUp = (chapterId: string, pIdx: number) => {
+    if (pIdx === 0) return;
+    setChapters(prev => prev.map(ch => {
+      if (ch.id !== chapterId) return ch;
+      const ids = [...ch.puzzle_ids];
+      [ids[pIdx - 1], ids[pIdx]] = [ids[pIdx], ids[pIdx - 1]];
+      const res = ch.resolved_items ? [...ch.resolved_items] : [];
+      if (res.length > pIdx) [res[pIdx - 1], res[pIdx]] = [res[pIdx], res[pIdx - 1]];
+      return { ...ch, puzzle_ids: ids, resolved_items: res };
+    }));
+  };
+
+  const movePuzzleDown = (chapterId: string, pIdx: number, total: number) => {
+    if (pIdx >= total - 1) return;
+    setChapters(prev => prev.map(ch => {
+      if (ch.id !== chapterId) return ch;
+      const ids = [...ch.puzzle_ids];
+      [ids[pIdx], ids[pIdx + 1]] = [ids[pIdx + 1], ids[pIdx]];
+      const res = ch.resolved_items ? [...ch.resolved_items] : [];
+      if (res.length > pIdx + 1) [res[pIdx], res[pIdx + 1]] = [res[pIdx + 1], res[pIdx]];
+      return { ...ch, puzzle_ids: ids, resolved_items: res };
+    }));
+  };
+
+  const removePuzzle = (chapterId: string, pIdx: number) => {
+    setChapters(prev => prev.map(ch => {
+      if (ch.id !== chapterId) return ch;
+      return {
+        ...ch,
+        puzzle_ids: ch.puzzle_ids.filter((_, i) => i !== pIdx),
+        resolved_items: ch.resolved_items?.filter((_, i) => i !== pIdx) || [],
+      };
+    }));
+  };
+
+  // Difficulty sort order
+  const DIFFICULTY_ORDER: Record<string, number> = { Easy: 1, Medium: 2, Hard: 3, Expert: 4 };
+
+  const sortChapterByDifficulty = (chapterId: string) => {
+    setChapters(prev => prev.map(ch => {
+      if (ch.id !== chapterId) return ch;
+      const paired = ch.puzzle_ids.map((pid, i) => ({
+        pid,
+        resolved: (ch.resolved_items || [])[i] as BookResolvedItem | undefined,
+      }));
+      paired.sort((a, b) => {
+        const da = DIFFICULTY_ORDER[a.resolved?.difficulty_label || ''] ?? 99;
+        const db = DIFFICULTY_ORDER[b.resolved?.difficulty_label || ''] ?? 99;
+        return da - db;
+      });
+      return {
+        ...ch,
+        puzzle_ids: paired.map(p => p.pid),
+        resolved_items: paired.map(p => p.resolved).filter(Boolean) as BookResolvedItem[],
+      };
+    }));
+  };
+
+  // Build a flat resolved-item lookup across all chapters
+  const resolvedMap = new Map<number, BookResolvedItem>();
+  chapters.forEach(ch => (ch.resolved_items || []).forEach(r => resolvedMap.set(r.id, r)));
+
+  const allPuzzleIds = chapters.flatMap(ch => ch.puzzle_ids);
 
   // --- RENDER ---
 
@@ -186,15 +289,15 @@ export function BookBuilder() {
           <button
             className="btn btn-secondary"
             onClick={handleExport}
-            disabled={isExporting || puzzleIds.length === 0}
-            title={puzzleIds.length === 0 ? 'Add puzzles first' : 'Export as PDF'}
+            disabled={isExporting || allPuzzleIds.length === 0}
+            title={allPuzzleIds.length === 0 ? 'Add puzzles first' : 'Export as PDF'}
           >
             {isExporting ? 'Exporting...' : 'Export PDF'}
           </button>
         </div>
 
         <div className="bb-main">
-          {/* Metadata */}
+          {/* Metadata sidebar */}
           <div className="bb-meta-panel">
             <h3>Book Details</h3>
             <label className="bb-field">
@@ -222,8 +325,12 @@ export function BookBuilder() {
               <span className="bb-value">8.5" x 11"</span>
             </div>
             <div className="bb-field">
+              <span className="bb-label">Chapters</span>
+              <span className="bb-value">{chapters.length}</span>
+            </div>
+            <div className="bb-field">
               <span className="bb-label">Puzzles</span>
-              <span className="bb-value">{puzzleIds.length}</span>
+              <span className="bb-value">{allPuzzleIds.length}</span>
             </div>
             {editingBook.exported_at && (
               <div className="bb-field">
@@ -233,61 +340,125 @@ export function BookBuilder() {
             )}
           </div>
 
-          {/* Puzzle list */}
+          {/* Chapter panel */}
           <div className="bb-puzzle-panel">
             <div className="bb-puzzle-header">
-              <h3>Puzzles</h3>
-              <button className="btn btn-secondary bb-add-btn" onClick={() => setShowPicker(true)}>
-                Add Puzzles
+              <h3>Chapters</h3>
+              <button className="btn btn-secondary bb-add-btn" onClick={addChapter}>
+                + Add Chapter
               </button>
             </div>
 
-            {puzzleIds.length === 0 ? (
-              <p className="bb-empty">No puzzles added yet. Click "Add Puzzles" to get started.</p>
+            {chapters.length === 0 ? (
+              <p className="bb-empty">No chapters yet. Click "+ Add Chapter" to get started.</p>
             ) : (
-              <div className="bb-puzzle-list">
-                {puzzleIds.map((pid, index) => {
-                  const resolved = resolvedMap.get(pid);
-                  return (
-                    <div key={`${pid}-${index}`} className="bb-puzzle-item">
-                      <span className="bb-puzzle-num">{index + 1}.</span>
-                      <span className="bb-puzzle-title">
-                        {resolved ? resolved.title : `Puzzle #${pid}`}
-                      </span>
-                      {resolved && (
-                        <span className={`bb-puzzle-status bb-status-${resolved.status}`}>
-                          {resolved.status}
-                        </span>
-                      )}
-                      {!resolved && <span className="bb-puzzle-status bb-status-missing">missing</span>}
-                      <div className="bb-puzzle-actions">
+              <div className="bb-chapters">
+                {chapters.map((chapter, chIdx) => (
+                  <div key={chapter.id} className="bb-chapter">
+                    <div className="bb-chapter-header">
+                      <span className="bb-chapter-badge">{chIdx + 1}</span>
+                      <div className="bb-chapter-meta">
+                        <input
+                          className="bb-chapter-name"
+                          value={chapter.name}
+                          onChange={e => updateChapterField(chapter.id, 'name', e.target.value)}
+                          placeholder="Chapter name..."
+                        />
+                        <input
+                          className="bb-chapter-desc"
+                          value={chapter.description || ''}
+                          onChange={e => updateChapterField(chapter.id, 'description', e.target.value)}
+                          placeholder="Brief description (optional)..."
+                        />
+                      </div>
+                      <div className="bb-chapter-controls">
                         <button
                           className="bb-move-btn"
-                          onClick={() => handleMoveUp(index)}
-                          disabled={index === 0}
-                          title="Move up"
+                          onClick={() => moveChapterUp(chIdx)}
+                          disabled={chIdx === 0}
+                          title="Move chapter up"
+                        >&#9650;</button>
+                        <button
+                          className="bb-move-btn"
+                          onClick={() => moveChapterDown(chIdx)}
+                          disabled={chIdx === chapters.length - 1}
+                          title="Move chapter down"
+                        >&#9660;</button>
+                        <button
+                          className="btn btn-secondary bb-add-btn"
+                          onClick={() => sortChapterByDifficulty(chapter.id)}
+                          title="Sort by difficulty (Easy → Expert)"
+                          disabled={chapter.puzzle_ids.length < 2}
                         >
-                          &#9650;
+                          Sort
                         </button>
                         <button
-                          className="bb-move-btn"
-                          onClick={() => handleMoveDown(index)}
-                          disabled={index === puzzleIds.length - 1}
-                          title="Move down"
+                          className="btn btn-secondary bb-add-btn"
+                          onClick={() => openPicker(chapter.id)}
                         >
-                          &#9660;
+                          Add Puzzles
                         </button>
                         <button
                           className="bb-remove-btn"
-                          onClick={() => handleRemove(index)}
-                          title="Remove"
-                        >
-                          &times;
-                        </button>
+                          onClick={() => deleteChapter(chapter.id)}
+                          title="Delete chapter"
+                        >&times;</button>
                       </div>
                     </div>
-                  );
-                })}
+
+                    <div className="bb-chapter-puzzles">
+                      {chapter.puzzle_ids.length === 0 ? (
+                        <p className="bb-empty bb-chapter-empty">
+                          No puzzles in this chapter.
+                        </p>
+                      ) : (
+                        chapter.puzzle_ids.map((pid, pIdx) => {
+                          const resolved = resolvedMap.get(pid);
+                          return (
+                            <div key={`${pid}-${pIdx}`} className="bb-puzzle-item">
+                              <span className="bb-puzzle-num">{pIdx + 1}.</span>
+                              <span className="bb-puzzle-title">
+                                {resolved ? resolved.title : `Puzzle #${pid}`}
+                              </span>
+                              {resolved?.difficulty_label && (
+                                <span className={`difficulty-badge difficulty-${resolved.difficulty_label.toLowerCase()}`}>
+                                  {resolved.difficulty_label}
+                                </span>
+                              )}
+                              {resolved && (
+                                <span className={`bb-puzzle-status bb-status-${resolved.status}`}>
+                                  {resolved.status}
+                                </span>
+                              )}
+                              {!resolved && (
+                                <span className="bb-puzzle-status bb-status-missing">missing</span>
+                              )}
+                              <div className="bb-puzzle-actions">
+                                <button
+                                  className="bb-move-btn"
+                                  onClick={() => movePuzzleUp(chapter.id, pIdx)}
+                                  disabled={pIdx === 0}
+                                  title="Move up"
+                                >&#9650;</button>
+                                <button
+                                  className="bb-move-btn"
+                                  onClick={() => movePuzzleDown(chapter.id, pIdx, chapter.puzzle_ids.length)}
+                                  disabled={pIdx === chapter.puzzle_ids.length - 1}
+                                  title="Move down"
+                                >&#9660;</button>
+                                <button
+                                  className="bb-remove-btn"
+                                  onClick={() => removePuzzle(chapter.id, pIdx)}
+                                  title="Remove"
+                                >&times;</button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -298,7 +469,7 @@ export function BookBuilder() {
           onClose={() => setShowPicker(false)}
           onAdd={handleAddPuzzles}
           bookType={editingBook.book_type}
-          existingIds={puzzleIds}
+          existingIds={allPuzzleIds}
         />
       </div>
     );
@@ -349,6 +520,9 @@ export function BookBuilder() {
                     {book.book_type === 'crossword' ? 'Crossword' : 'Word Search'}
                   </span>
                   <span>{book.puzzle_ids.length} puzzle{book.puzzle_ids.length !== 1 ? 's' : ''}</span>
+                  {book.chapters && book.chapters.length > 0 && (
+                    <span>{book.chapters.length} chapter{book.chapters.length !== 1 ? 's' : ''}</span>
+                  )}
                   <span className={`bb-status-badge bb-status-${book.status}`}>{book.status}</span>
                 </div>
                 <p className="bb-card-date">

@@ -36,6 +36,7 @@ class PuzzleCreate(BaseModel):
     grid_data: List[List[dict]]
     word_placements: Optional[List[WordPlacement]] = None
     difficulty: Optional[int] = None
+    difficulty_label: Optional[str] = None
     status: str = "draft"
     theme: Optional[str] = None
     notes: Optional[str] = None
@@ -46,6 +47,7 @@ class PuzzleUpdate(BaseModel):
     grid_data: Optional[List[List[dict]]] = None
     word_placements: Optional[List[WordPlacement]] = None
     difficulty: Optional[int] = None
+    difficulty_label: Optional[str] = None
     status: Optional[str] = None
     theme: Optional[str] = None
     notes: Optional[str] = None
@@ -57,6 +59,7 @@ class PuzzleResponse(BaseModel):
     grid_data: List[List[dict]]
     word_placements: Optional[List[dict]] = None
     difficulty: Optional[int] = None
+    difficulty_label: Optional[str] = None
     status: str
     theme: Optional[str] = None
     notes: Optional[str] = None
@@ -84,6 +87,7 @@ def create_puzzle(puzzle: PuzzleCreate, db: Session = Depends(get_db)):
         grid_data=puzzle.grid_data,
         word_placements=[wp.model_dump() for wp in puzzle.word_placements] if puzzle.word_placements else None,
         difficulty=puzzle.difficulty,
+        difficulty_label=puzzle.difficulty_label,
         status=puzzle.status,
         theme=puzzle.theme,
         notes=puzzle.notes
@@ -160,6 +164,7 @@ def export_puzzle_pdf(
         grid_data=puzzle.grid_data,
         word_placements=puzzle.word_placements,
         include_answer_key=include_answer_key,
+        difficulty_label=puzzle.difficulty_label,
     )
 
     safe_title = "".join(c for c in puzzle.title if c.isalnum() or c in " -_").strip() or "puzzle"

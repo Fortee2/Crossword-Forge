@@ -13,12 +13,20 @@ from ..services.pdf_exporter import generate_book_pdf
 router = APIRouter(prefix="/books", tags=["books"])
 
 
+class ChapterIn(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    puzzle_ids: List[int] = []
+
+
 class BookCreate(BaseModel):
     title: str = "Untitled Book"
     subtitle: Optional[str] = None
     author: Optional[str] = None
     book_type: str  # "crossword" | "wordsearch"
     puzzle_ids: List[int] = []
+    chapters: Optional[List[ChapterIn]] = None
 
 
 class BookUpdate(BaseModel):
@@ -26,12 +34,22 @@ class BookUpdate(BaseModel):
     subtitle: Optional[str] = None
     author: Optional[str] = None
     puzzle_ids: Optional[List[int]] = None
+    chapters: Optional[List[ChapterIn]] = None
 
 
 class ResolvedItem(BaseModel):
     id: int
     title: str
     status: str
+    difficulty_label: Optional[str] = None
+
+
+class ChapterOut(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    puzzle_ids: List[int] = []
+    resolved_items: List[ResolvedItem] = []
 
 
 class BookResponse(BaseModel):
@@ -41,6 +59,7 @@ class BookResponse(BaseModel):
     author: Optional[str]
     book_type: str
     puzzle_ids: List[int]
+    chapters: Optional[List[ChapterOut]] = None
     resolved_items: List[ResolvedItem] = []
     status: str
     created_at: datetime
@@ -52,18 +71,37 @@ class BookResponse(BaseModel):
 
 
 def _resolve_items(db: Session, book_type: str, puzzle_ids: list) -> List[dict]:
-    """Look up titles and statuses for each puzzle_id, skipping missing ones."""
+    """Look up titles and statuses for each puzzle_id."""
     model = Puzzle if book_type == "crossword" else WordSearch
     resolved = []
     for pid in puzzle_ids:
         item = db.query(model).filter(model.id == pid).first()
         if item:
-            resolved.append({"id": item.id, "title": item.title, "status": item.status})
+            resolved.append({
+                "id": item.id,
+                "title": item.title,
+                "status": item.status,
+                "difficulty_label": getattr(item, "difficulty_label", None),
+            })
     return resolved
 
 
+def _resolve_chapters(db: Session, book_type: str, chapters: list) -> List[dict]:
+    result = []
+    for ch in chapters:
+        resolved = _resolve_items(db, book_type, ch.get("puzzle_ids", []))
+        result.append({
+            "id": ch["id"],
+            "name": ch["name"],
+            "description": ch.get("description"),
+            "puzzle_ids": ch.get("puzzle_ids", []),
+            "resolved_items": resolved,
+        })
+    return result
+
+
 def _book_response(book: Book, db: Session) -> dict:
-    """Build a BookResponse dict with resolved_items."""
+    chapters_raw = book.chapters or []
     return {
         "id": book.id,
         "title": book.title,
@@ -71,12 +109,19 @@ def _book_response(book: Book, db: Session) -> dict:
         "author": book.author,
         "book_type": book.book_type,
         "puzzle_ids": book.puzzle_ids or [],
+        "chapters": _resolve_chapters(db, book.book_type, chapters_raw) if chapters_raw else None,
         "resolved_items": _resolve_items(db, book.book_type, book.puzzle_ids or []),
         "status": book.status,
         "created_at": book.created_at,
         "updated_at": book.updated_at,
         "exported_at": book.exported_at,
     }
+
+
+def _apply_chapters(book: Book, chapters: List[ChapterIn]) -> None:
+    """Store chapters on the book and derive the flat puzzle_ids from them."""
+    book.chapters = [ch.model_dump() for ch in chapters]
+    book.puzzle_ids = [pid for ch in chapters for pid in ch.puzzle_ids]
 
 
 @router.post("", response_model=BookResponse)
@@ -90,6 +135,8 @@ def create_book(data: BookCreate, db: Session = Depends(get_db)):
         book_type=data.book_type,
         puzzle_ids=data.puzzle_ids,
     )
+    if data.chapters is not None:
+        _apply_chapters(db_book, data.chapters)
     db.add(db_book)
     db.commit()
     db.refresh(db_book)
@@ -117,6 +164,13 @@ def update_book(book_id: int, data: BookUpdate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Book not found")
 
     update_data = data.model_dump(exclude_unset=True)
+
+    # Handle chapters — derive puzzle_ids from them
+    if "chapters" in update_data and update_data["chapters"] is not None:
+        _apply_chapters(book, data.chapters)
+        del update_data["chapters"]
+        update_data.pop("puzzle_ids", None)  # chapters win
+
     for key, value in update_data.items():
         setattr(book, key, value)
 
@@ -146,41 +200,54 @@ def export_book_pdf(book_id: int, db: Session = Depends(get_db)):
     if not puzzle_ids:
         raise HTTPException(status_code=400, detail="Book has no puzzles")
 
-    # Fetch all puzzles in order
     model = Puzzle if book.book_type == "crossword" else WordSearch
-    puzzles = []
-    for pid in puzzle_ids:
-        item = db.query(model).filter(model.id == pid).first()
-        if item:
-            puzzles.append(item)
 
-    if not puzzles:
-        raise HTTPException(status_code=400, detail="None of the referenced puzzles exist")
-
-    # Convert ORM objects to dicts for the PDF generator
-    puzzle_dicts = []
-    for p in puzzles:
+    def _puzzle_dict(item):
         if book.book_type == "crossword":
-            puzzle_dicts.append({
-                "title": p.title,
-                "grid_data": p.grid_data,
-                "word_placements": p.word_placements,
-            })
-        else:
-            puzzle_dicts.append({
-                "title": p.title,
-                "grid": p.grid,
-                "words": p.words,
-                "placements": p.placements,
-            })
+            return {"title": item.title, "grid_data": item.grid_data, "word_placements": item.word_placements, "difficulty_label": getattr(item, "difficulty_label", None)}
+        return {"title": item.title, "grid": item.grid, "words": item.words, "placements": item.placements, "difficulty_label": getattr(item, "difficulty_label", None)}
 
-    pdf_bytes = generate_book_pdf(
-        title=book.title,
-        subtitle=book.subtitle,
-        author=book.author,
-        book_type=book.book_type,
-        puzzles=puzzle_dicts,
-    )
+    # Build chapter-aware structure for PDF generator
+    chapters_raw = book.chapters or []
+    if chapters_raw:
+        pdf_chapters = []
+        for ch in chapters_raw:
+            ch_puzzles = []
+            for pid in ch.get("puzzle_ids", []):
+                item = db.query(model).filter(model.id == pid).first()
+                if item:
+                    ch_puzzles.append(_puzzle_dict(item))
+            pdf_chapters.append({
+                "name": ch["name"],
+                "description": ch.get("description"),
+                "puzzles": ch_puzzles,
+            })
+        pdf_bytes = generate_book_pdf(
+            title=book.title,
+            subtitle=book.subtitle,
+            author=book.author,
+            book_type=book.book_type,
+            puzzles=[],
+            chapters=pdf_chapters,
+        )
+    else:
+        # Legacy flat mode
+        puzzles = []
+        for pid in puzzle_ids:
+            item = db.query(model).filter(model.id == pid).first()
+            if item:
+                puzzles.append(_puzzle_dict(item))
+
+        if not puzzles:
+            raise HTTPException(status_code=400, detail="None of the referenced puzzles exist")
+
+        pdf_bytes = generate_book_pdf(
+            title=book.title,
+            subtitle=book.subtitle,
+            author=book.author,
+            book_type=book.book_type,
+            puzzles=puzzles,
+        )
 
     # Update export status
     from sqlalchemy.sql import func

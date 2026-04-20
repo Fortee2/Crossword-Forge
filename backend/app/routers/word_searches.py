@@ -32,6 +32,7 @@ class WordSearchCreate(BaseModel):
     words: List[str]
     placements: List[WordSearchPlacement]
     config: WordSearchConfig
+    difficulty_label: Optional[str] = None
     status: str = "draft"
 
 
@@ -41,6 +42,7 @@ class WordSearchUpdate(BaseModel):
     words: Optional[List[str]] = None
     placements: Optional[List[WordSearchPlacement]] = None
     config: Optional[WordSearchConfig] = None
+    difficulty_label: Optional[str] = None
     status: Optional[str] = None
 
 
@@ -51,6 +53,7 @@ class WordSearchResponse(BaseModel):
     words: List[str]
     placements: List[dict]
     config: dict
+    difficulty_label: Optional[str] = None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -67,6 +70,7 @@ def create_word_search(data: WordSearchCreate, db: Session = Depends(get_db)):
         words=data.words,
         placements=[p.model_dump() for p in data.placements],
         config=data.config.model_dump(),
+        difficulty_label=data.difficulty_label,
         status=data.status,
     )
     db.add(db_ws)
@@ -132,6 +136,7 @@ def export_word_search_pdf(
         words=ws.words,
         placements=ws.placements,
         include_answer_key=include_answer_key,
+        difficulty_label=ws.difficulty_label,
     )
 
     safe_title = "".join(c for c in ws.title if c.isalnum() or c in " -_").strip() or "word-search"

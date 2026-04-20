@@ -18,6 +18,7 @@ export interface Puzzle {
   grid_data: GridCell[][];
   word_placements?: WordPlacement[];
   difficulty?: number;
+  difficulty_label?: string;
   status: 'draft' | 'complete' | 'published';
   theme?: string;
   notes?: string;
@@ -172,6 +173,7 @@ export interface WordSearchPuzzle {
   words: string[];
   placements: WordSearchPlacement[];
   config: WordSearchConfig;
+  difficulty_label?: string;
   status: 'draft' | 'complete' | 'published';
   created_at: string;
   updated_at: string;
@@ -188,6 +190,15 @@ export interface BookResolvedItem {
   id: number;
   title: string;
   status: string;
+  difficulty_label?: string;
+}
+
+export interface BookChapter {
+  id: string;
+  name: string;
+  description?: string;
+  puzzle_ids: number[];
+  resolved_items?: BookResolvedItem[];
 }
 
 export interface Book {
@@ -197,6 +208,7 @@ export interface Book {
   author?: string;
   book_type: 'crossword' | 'wordsearch';
   puzzle_ids: number[];
+  chapters?: BookChapter[];
   resolved_items: BookResolvedItem[];
   status: 'draft' | 'exported';
   created_at: string;

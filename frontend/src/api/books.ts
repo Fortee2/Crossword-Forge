@@ -1,4 +1,4 @@
-import { Book } from '../types';
+import { Book, BookChapter } from '../types';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -37,6 +37,7 @@ export async function updateBook(
     subtitle: string;
     author: string;
     puzzle_ids: number[];
+    chapters: Pick<BookChapter, 'id' | 'name' | 'description' | 'puzzle_ids'>[];
   }>
 ): Promise<Book> {
   const response = await fetch(`${API_BASE}/books/${id}`, {

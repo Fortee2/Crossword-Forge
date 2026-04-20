@@ -17,6 +17,7 @@ function App() {
   const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
   const [currentPuzzleId, setCurrentPuzzleId] = useState<number | null>(null);
   const [puzzleTitle, setPuzzleTitle] = useState('Untitled Puzzle');
+  const [puzzleDifficulty, setPuzzleDifficulty] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -49,6 +50,7 @@ function App() {
           title: puzzleTitle,
           grid_data: grid,
           word_placements: wordPlacements,
+          difficulty_label: puzzleDifficulty || undefined,
         });
         showMessage('success', 'Puzzle saved!');
       } else {
@@ -56,6 +58,7 @@ function App() {
           title: puzzleTitle,
           grid_data: grid,
           word_placements: wordPlacements,
+          difficulty_label: puzzleDifficulty || undefined,
         });
         setCurrentPuzzleId(newPuzzle.id);
         showMessage('success', 'Puzzle created!');
@@ -74,6 +77,7 @@ function App() {
       const puzzle = await getPuzzle(puzzleId);
       setGrid(puzzle.grid_data);
       setPuzzleTitle(puzzle.title);
+      setPuzzleDifficulty(puzzle.difficulty_label || '');
       setCurrentPuzzleId(puzzle.id);
       setInitialWordPlacements(puzzle.word_placements as WordPlacement[] | undefined);
       setShowPuzzleList(false);
@@ -121,6 +125,7 @@ function App() {
   const handleNew = () => {
     setGrid(createEmptyGrid());
     setPuzzleTitle('Untitled Puzzle');
+    setPuzzleDifficulty('');
     setCurrentPuzzleId(null);
     setInitialWordPlacements(undefined);
     setWordPlacements([]);
@@ -176,6 +181,18 @@ function App() {
               onChange={(e) => setPuzzleTitle(e.target.value)}
               placeholder="Puzzle title..."
             />
+            <select
+              className="difficulty-select"
+              value={puzzleDifficulty}
+              onChange={(e) => setPuzzleDifficulty(e.target.value)}
+              title="Difficulty"
+            >
+              <option value="">Difficulty...</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+              <option value="Expert">Expert</option>
+            </select>
             <button onClick={handleNew} className="btn btn-secondary">
               New
             </button>
@@ -217,6 +234,11 @@ function App() {
                 <li key={puzzle.id} className="puzzle-item">
                   <div className="puzzle-info">
                     <span className="puzzle-name">{puzzle.title}</span>
+                    {puzzle.difficulty_label && (
+                      <span className={`difficulty-badge difficulty-${puzzle.difficulty_label.toLowerCase()}`}>
+                        {puzzle.difficulty_label}
+                      </span>
+                    )}
                     <span className="puzzle-date">
                       {new Date(puzzle.updated_at).toLocaleDateString()}
                     </span>
